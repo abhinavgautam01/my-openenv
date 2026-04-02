@@ -5,12 +5,19 @@ from fastapi.testclient import TestClient
 
 from client import EmailTriageEnvSync
 from inference import normalize_ranking_decision
-from server.app import app
+from server.app import app, _environments, SESSION_COOKIE_NAME
 from server.environment import EmailTriageEnvironment
 from server.models import Email, EmailTriageAction
 from server.graders import grade_episode
 from server.scenarios.generator import TASK_CONFIG
 from server.scenarios.generator import generate_scenario
+
+
+@pytest.fixture(autouse=True)
+def clear_sessions():
+    _environments.clear()
+    yield
+    _environments.clear()
 
 
 def _build_full_triage_action(gt):
@@ -90,6 +97,43 @@ def test_tasks_endpoint_matches_task_config():
     for task_name, config in TASK_CONFIG.items():
         assert task_map[task_name]["email_count"] == config["email_count"]
         assert task_map[task_name]["difficulty"] == config["difficulty"]
+
+
+def test_root_landing_page_returns_html():
+    client = TestClient(app)
+    response = client.get("/")
+    response.raise_for_status()
+
+    assert "text/html" in response.headers["content-type"]
+    assert "Email Triage OpenEnv" in response.text
+    assert "/reset" in response.text
+
+
+def test_reset_sets_session_cookie_and_state_is_isolated_per_client():
+    client_one = TestClient(app, base_url="https://testserver")
+    client_two = TestClient(app, base_url="https://testserver")
+
+    reset_response = client_one.post("/reset", json={"task_type": "ranking", "seed": 42})
+    reset_response.raise_for_status()
+
+    assert SESSION_COOKIE_NAME in reset_response.cookies
+
+    state_one = client_one.get("/state")
+    state_one.raise_for_status()
+    assert state_one.json()["task_type"] == "ranking"
+
+    state_two = client_two.get("/state")
+    state_two.raise_for_status()
+    assert state_two.json()["episode_id"] == ""
+    assert state_two.json()["done"] is True
+
+
+def test_step_without_reset_returns_error():
+    client = TestClient(app)
+    response = client.post("/step", json={"email_id": "e1", "category": "INFO"})
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "No episode in progress. Call /reset first."
 
 
 def test_sync_client_forwards_ranking_field():
