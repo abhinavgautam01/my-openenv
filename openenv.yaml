@@ -1,0 +1,109 @@
+# OpenEnv Configuration for Email Triage Environment
+name: email_triage
+version: "0.1.0"
+description: "Thread-aware email triage environment for training AI agents to prioritize, categorize, and manage inbox emails under response-budget constraints"
+
+author: "Email Triage OpenEnv Contributors"
+tags:
+  - email
+  - productivity
+  - prioritization
+  - nlp
+  - openenv
+
+# Environment configuration
+config:
+  default_task: "classification"
+  episode_timeout: 300  # 5 minutes max per episode
+  max_steps: 100
+
+# Task definitions
+tasks:
+  - name: "classification"
+    description: "Classify a single email into one of 5 categories (URGENT, ACTION_REQUIRED, INFO, SPAM, PERSONAL)"
+    difficulty: "easy"
+    
+  - name: "ranking"
+    description: "Rank 8 emails by priority order (most urgent first)"
+    difficulty: "medium"
+    
+  - name: "full_triage"
+    description: "Full inbox triage with 25 emails, threaded dependencies, duplicate handling, and a fixed response budget"
+    difficulty: "hard"
+
+# Action space definition
+action_space:
+  type: "dict"
+  description: "Email triage action with priority, category, disposition, and optional response draft"
+  fields:
+    email_id:
+      type: "string"
+      required: true
+      description: "ID of the email being acted upon"
+    priority:
+      type: "enum"
+      values: ["HIGH", "MEDIUM", "LOW"]
+      required: false
+      description: "Priority assignment for the email"
+    category:
+      type: "enum"
+      values: ["URGENT", "ACTION_REQUIRED", "INFO", "SPAM", "PERSONAL"]
+      required: false
+      description: "Category classification"
+    disposition:
+      type: "enum"
+      values: ["RESPOND", "DELEGATE", "ARCHIVE", "DEFER"]
+      required: false
+      description: "What action to take on the email"
+    response_draft:
+      type: "string"
+      required: false
+      description: "Draft response text if disposition is RESPOND"
+    ranking:
+      type: "list"
+      required: false
+      description: "For ranking tasks, ordered email IDs from highest to lowest priority"
+
+# Observation space definition
+observation_space:
+  type: "dict"
+  description: "Current inbox state with emails to process and episode metadata"
+  fields:
+    task_id:
+      type: "string"
+      description: "Unique identifier for current task instance"
+    task_type:
+      type: "enum"
+      values: ["classification", "ranking", "full_triage"]
+      description: "Current task difficulty level"
+    emails:
+      type: "list"
+      description: "List of emails to process"
+    emails_processed:
+      type: "integer"
+      description: "Number of emails already processed"
+    emails_remaining:
+      type: "integer"
+      description: "Number of emails left to process"
+    current_time:
+      type: "datetime"
+      description: "Simulated current timestamp"
+    done:
+      type: "boolean"
+      description: "Whether episode is complete"
+    reward:
+      type: "float"
+      description: "Reward from the most recent step"
+    cumulative_reward:
+      type: "float"
+      description: "Cumulative reward across the episode"
+
+# Server entry points
+server:
+  module: "server.app"
+  app: "app"
+
+# Client entry points
+client:
+  class: "EmailTriageEnv"
+  module: "client"

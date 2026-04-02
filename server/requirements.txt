@@ -1,0 +1,7 @@
+# Server dependencies for Email Triage Environment
+fastapi>=0.100.0
+uvicorn[standard]>=0.22.0
+pydantic>=2.0.0
+openenv-core>=0.1.0
+scipy>=1.10.0
+httpx>=0.24.0
