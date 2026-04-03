@@ -43,6 +43,7 @@ MAX_STEPS = 20
 TEMPERATURE = 0.3
 MAX_TOKENS = 500
 SUCCESS_SCORE_THRESHOLD = 0.5
+MAX_RESPONSE_BUDGET = 8
 
 
 # Environment class that spawns Docker containers
@@ -421,6 +422,65 @@ def get_llm_decision(
         return parse_llm_response("", task_type)
 
 
+def _has_urgent_signal(email: Email) -> bool:
+    text = f"{email.subject} {email.body}".lower()
+    return any(
+        token in text
+        for token in (
+            "urgent",
+            "asap",
+            "outage",
+            "incident",
+            "sev",
+            "security",
+            "breach",
+            "executive",
+            "deadline",
+            "blocked",
+            "locked",
+            "approval",
+            "customer",
+            "production",
+        )
+    )
+
+
+def apply_response_budget_guardrail(
+    email: Email,
+    decision: Dict[str, Any],
+    responses_used: int,
+) -> Dict[str, Any]:
+    """Avoid spending the limited response budget on lower-value emails."""
+    if decision.get("disposition") != "RESPOND":
+        return decision
+
+    must_respond = (
+        decision.get("priority") == "HIGH"
+        or (
+            decision.get("category") in {"URGENT", "ACTION_REQUIRED"}
+            and email.sender_importance in {"VIP", "KNOWN"}
+        )
+        or _has_urgent_signal(email)
+    )
+
+    should_respond = responses_used < MAX_RESPONSE_BUDGET and (
+        must_respond
+        or (
+            responses_used < MAX_RESPONSE_BUDGET - 2
+            and decision.get("category") == "ACTION_REQUIRED"
+            and email.sender_importance in {"VIP", "KNOWN"}
+        )
+    )
+
+    if should_respond:
+        return decision
+
+    adjusted = dict(decision)
+    adjusted["disposition"] = "DEFER" if decision.get("category") in {"URGENT", "ACTION_REQUIRED"} else "ARCHIVE"
+    adjusted["response_draft"] = None
+    return adjusted
+
+
 def create_action(
     email_id: str,
     decision: Dict[str, Any],
@@ -471,6 +531,8 @@ async def run_task(
     score = 0.0
     success = False
     
+    responses_used = 0
+
     try:
         # Reset environment
         result = await env.reset(task_type=task_type, seed=seed)
@@ -518,8 +580,9 @@ async def run_task(
                 success = score >= SUCCESS_SCORE_THRESHOLD
             
         else:
+            max_steps = max(MAX_STEPS, len(result.observation.emails) + 5)
             # For other tasks, process emails one by one
-            for step in range(1, MAX_STEPS + 1):
+            for step in range(1, max_steps + 1):
                 if result.done:
                     break
                 
@@ -531,6 +594,12 @@ async def run_task(
                 
                 # Get LLM decision
                 decision = get_llm_decision(client, email, task_type)
+                if task_type == "full_triage":
+                    decision = apply_response_budget_guardrail(
+                        email=email,
+                        decision=decision,
+                        responses_used=responses_used,
+                    )
                 
                 # Create and execute action
                 action = create_action(email.id, decision, task_type)
@@ -553,6 +622,13 @@ async def run_task(
                     done=result.done,
                     error=error,
                 )
+
+                if (
+                    task_type == "full_triage"
+                    and action.disposition == "RESPOND"
+                    and not error
+                ):
+                    responses_used += 1
                 
                 if result.done:
                     break
@@ -603,8 +679,6 @@ async def main():
     # Create environment from Docker image
     env = await EmailTriageEnv.from_docker_image(LOCAL_IMAGE_NAME)
     try:
-        print(f"Container started successfully", file=sys.stderr, flush=True)
-        
         # Run tasks - NO separators or headers to stdout
         for task_type in task_list:
             score = await run_task(
@@ -618,19 +692,6 @@ async def main():
     finally:
         # Always close the environment
         await env.close()
-        print("Container stopped", file=sys.stderr, flush=True)
-    
-    # No summary to stdout - all output is [START]/[STEP]/[END] only
-    # Summary can go to stderr if needed
-    print(f"\n{'='*60}", file=sys.stderr, flush=True)
-    print("SUMMARY", file=sys.stderr, flush=True)
-    print(f"{'='*60}", file=sys.stderr, flush=True)
-    for task, score in scores.items():
-        status = "PASS" if score >= SUCCESS_SCORE_THRESHOLD else "FAIL"
-        print(f"  {task}: {score:.3f} [{status}]", file=sys.stderr, flush=True)
-    
-    avg_score = sum(scores.values()) / len(scores) if scores else 0.0
-    print(f"\n  Average: {avg_score:.3f}", file=sys.stderr, flush=True)
 
 
 if __name__ == "__main__":
