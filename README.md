@@ -1,6 +1,5 @@
 ---
 title: Email Triage OpenEnv
-emoji: "📬"
 colorFrom: blue
 colorTo: gray
 sdk: docker
@@ -10,6 +9,12 @@ app_port: 8000
 # Email Triage OpenEnv Environment
 
 Email triage is a real workplace task: people classify incoming mail, decide what matters now, and manage limited attention. This environment turns that workflow into a reproducible OpenEnv benchmark with deterministic tasks, typed models, programmatic graders, and a containerized API.
+
+## Submission Links
+
+- GitHub repository: `https://github.com/abhinavgautam01/my-openenv`
+- Hugging Face Space: `https://huggingface.co/spaces/abhinavgautam01/my-env`
+- Space app URL: `https://abhinavgautam01-my-env.hf.space`
 
 ## Environment Summary
 
@@ -137,7 +142,7 @@ curl -X POST http://localhost:8000/step \
 
 ## Inference
 
-The root `inference.py` uses the OpenAI client and reads:
+The root `inference.py` is the demo script and baseline inference runner. It uses the OpenAI client and reads:
 
 - `HF_TOKEN`
 - `API_BASE_URL`
@@ -173,5 +178,7 @@ Validated locally with:
 
 - `python3 -m pytest -q`
 - `openenv validate`
+- `docker build -t email-triage-openenv-final-check .`
+- fresh container smoke checks for `/health`, `/tasks`, and `/reset`
 
-Live Hugging Face Space validation and external-model baseline scores still need to be reproduced in your own deployment environment.
+The deployed Space is available at `https://abhinavgautam01-my-env.hf.space`.
