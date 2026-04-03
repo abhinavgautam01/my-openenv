@@ -178,10 +178,7 @@ async def home():
     tasks_markup = "".join(
         f"""
         <article class="task-card">
-          <div class="task-meta">
-            <span class="pill">{config["difficulty"]}</span>
-            <span class="count">{config["email_count"]} emails</span>
-          </div>
+          <div class="task-meta"><span class="pill">{config["difficulty"]}</span><span class="count">{config["email_count"]} emails</span></div>
           <h3>{task_name}</h3>
           <p>{config["description"]}</p>
         </article>
@@ -198,16 +195,19 @@ async def home():
     <style>
       :root {{
         color-scheme: dark;
-        --bg: #071018;
-        --panel: rgba(7, 19, 31, 0.9);
-        --panel-strong: rgba(10, 24, 40, 0.98);
-        --border: rgba(111, 231, 255, 0.14);
-        --text: #edf6ff;
-        --muted: #9bb1c9;
-        --accent: #6fe7ff;
-        --accent-2: #ffd166;
-        --accent-3: #9effd5;
-        --shadow: 0 28px 80px rgba(0, 0, 0, 0.36);
+        --bg: #05070c;
+        --bg-soft: #0b1020;
+        --panel: rgba(11, 16, 32, 0.88);
+        --panel-strong: rgba(14, 20, 38, 0.98);
+        --panel-alt: rgba(17, 25, 49, 0.96);
+        --border: rgba(126, 146, 255, 0.18);
+        --text: #f3f6ff;
+        --muted: #96a3c6;
+        --accent: #80a9ff;
+        --accent-2: #59f1c8;
+        --accent-3: #ffc857;
+        --danger: #ff7a90;
+        --shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
       }}
       * {{ box-sizing: border-box; }}
       body {{
@@ -215,31 +215,106 @@ async def home():
         font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
         color: var(--text);
         background:
-          radial-gradient(circle at 0% 0%, rgba(111, 231, 255, 0.16), transparent 28%),
-          radial-gradient(circle at 100% 0%, rgba(255, 209, 102, 0.12), transparent 26%),
-          radial-gradient(circle at 50% 100%, rgba(158, 255, 213, 0.08), transparent 30%),
-          linear-gradient(155deg, #050b12 0%, #071018 45%, #0d1c2c 100%);
+          radial-gradient(circle at 12% 0%, rgba(128, 169, 255, 0.16), transparent 24%),
+          radial-gradient(circle at 88% 0%, rgba(89, 241, 200, 0.10), transparent 20%),
+          radial-gradient(circle at 50% 100%, rgba(255, 200, 87, 0.08), transparent 22%),
+          linear-gradient(180deg, #04060a 0%, #070b14 45%, #0b1120 100%);
         min-height: 100vh;
       }}
       .shell {{
-        max-width: 1100px;
+        max-width: 1180px;
         margin: 0 auto;
-        padding: 48px 24px 56px;
+        padding: 32px 24px 56px;
       }}
-      .signal-bar {{
+      .topbar {{
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: center;
+        margin-bottom: 18px;
+      }}
+      .brand {{
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }}
+      .mark {{
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        background:
+          linear-gradient(145deg, rgba(128, 169, 255, 0.24), rgba(89, 241, 200, 0.16)),
+          rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--border);
+        position: relative;
+        box-shadow: var(--shadow);
+      }}
+      .mark::before,
+      .mark::after {{
+        content: "";
+        position: absolute;
+        border-radius: 999px;
+      }}
+      .mark::before {{
+        width: 20px;
+        height: 4px;
+        background: var(--accent);
+        left: 10px;
+        top: 11px;
+        box-shadow: 0 8px 0 var(--accent), 0 16px 0 var(--accent-2);
+      }}
+      .mark::after {{
+        width: 4px;
+        height: 20px;
+        background: var(--accent-3);
+        right: 11px;
+        top: 11px;
+      }}
+      .brand-copy strong {{
+        display: block;
+        font-size: 0.98rem;
+        letter-spacing: 0.02em;
+      }}
+      .brand-copy span {{
+        color: var(--muted);
+        font-size: 0.88rem;
+      }}
+      .nav-links {{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }}
+      .nav-links a,
+      .hero-actions a {{
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 11px 14px;
+        border-radius: 14px;
+        text-decoration: none;
+        color: var(--text);
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.04);
+      }}
+      .nav-links a.primary,
+      .hero-actions a.primary {{
+        background: linear-gradient(135deg, rgba(128, 169, 255, 0.20), rgba(89, 241, 200, 0.14));
+      }}
+      .metrics {{
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 14px;
-        margin-bottom: 18px;
+        margin-bottom: 20px;
       }}
-      .signal {{
+      .metric {{
         padding: 14px 16px;
         border-radius: 18px;
         border: 1px solid var(--border);
         background: rgba(255, 255, 255, 0.035);
         box-shadow: var(--shadow);
       }}
-      .signal label {{
+      .metric label {{
         display: block;
         margin-bottom: 8px;
         color: var(--muted);
@@ -247,16 +322,16 @@ async def home():
         text-transform: uppercase;
         letter-spacing: 0.08em;
       }}
-      .signal span {{
+      .metric span {{
         font-family: "IBM Plex Mono", monospace;
-        color: var(--accent-3);
+        color: var(--accent-2);
         font-size: 0.98rem;
       }}
       .hero {{
         display: grid;
         gap: 22px;
-        grid-template-columns: 1.5fr 1fr;
-        align-items: stretch;
+        grid-template-columns: 1.35fr 0.95fr;
+        align-items: start;
       }}
       .panel {{
         background: var(--panel);
@@ -274,7 +349,7 @@ async def home():
         align-items: center;
         padding: 8px 12px;
         border-radius: 999px;
-        background: rgba(111, 231, 255, 0.12);
+        background: rgba(128, 169, 255, 0.12);
         color: var(--accent);
         font-size: 13px;
         letter-spacing: 0.04em;
@@ -282,8 +357,9 @@ async def home():
       }}
       h1 {{
         margin: 18px 0 12px;
-        font-size: clamp(2.2rem, 5vw, 4rem);
-        line-height: 0.95;
+        font-size: clamp(2.5rem, 5.5vw, 4.4rem);
+        line-height: 0.92;
+        max-width: 10ch;
       }}
       .lede {{
         margin: 0;
@@ -298,23 +374,15 @@ async def home():
         gap: 12px;
         margin-top: 22px;
       }}
-      .button {{
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        padding: 12px 16px;
-        border-radius: 14px;
-        text-decoration: none;
-        color: var(--text);
-        border: 1px solid var(--border);
-        background: rgba(255, 255, 255, 0.04);
+      .hero-actions a.primary {{
+        background: linear-gradient(135deg, rgba(128, 169, 255, 0.20), rgba(255, 200, 87, 0.16));
+        border-color: rgba(255, 200, 87, 0.20);
       }}
-      .button.primary {{
-        background: linear-gradient(135deg, rgba(111, 231, 255, 0.18), rgba(255, 209, 102, 0.16));
-        border-color: rgba(255, 209, 102, 0.22);
+      .aside-stack {{
+        display: grid;
+        gap: 18px;
       }}
-      .status-card {{
+      .status-card, .request-card {{
         padding: 24px;
         display: grid;
         gap: 18px;
@@ -332,6 +400,20 @@ async def home():
       }}
       .status-value {{
         font-family: "IBM Plex Mono", monospace;
+        color: var(--accent-2);
+      }}
+      .request-card {{
+        background:
+          linear-gradient(180deg, rgba(128, 169, 255, 0.08), rgba(255, 255, 255, 0.02)),
+          var(--panel-alt);
+      }}
+      .request-card h3 {{
+        margin-bottom: 6px;
+      }}
+      .request-card p {{
+        margin-bottom: 10px;
+      }}
+      .request-card code {{
         color: var(--accent-3);
       }}
       .grid {{
@@ -357,7 +439,7 @@ async def home():
         display: inline-block;
         padding: 6px 10px;
         border-radius: 999px;
-        background: rgba(111, 231, 255, 0.12);
+        background: rgba(128, 169, 255, 0.12);
         color: var(--accent);
         font-size: 12px;
         text-transform: uppercase;
@@ -385,8 +467,8 @@ async def home():
         overflow-x: auto;
         white-space: pre-wrap;
         word-break: break-word;
-        background: #020815;
-        border: 1px solid rgba(131, 170, 255, 0.18);
+        background: #060a16;
+        border: 1px solid rgba(126, 146, 255, 0.18);
         border-radius: 16px;
         padding: 18px;
         color: #d6e6ff;
@@ -404,19 +486,39 @@ async def home():
         margin-top: 18px;
         padding: 16px 18px;
         border-radius: 16px;
-        border: 1px solid rgba(255, 209, 102, 0.24);
-        background: rgba(255, 209, 102, 0.08);
-        color: #fff2c6;
+        border: 1px solid rgba(255, 122, 144, 0.22);
+        background: rgba(255, 122, 144, 0.08);
+        color: #ffd4dc;
+      }}
+      .section-head {{
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: end;
+        margin-top: 32px;
+      }}
+      .section-head p {{
+        max-width: 56ch;
+      }}
+      .footer-note {{
+        margin-top: 22px;
+        color: var(--muted);
+        font-size: 0.92rem;
       }}
       @media (max-width: 900px) {{
-        .signal-bar,
+        .topbar,
+        .metrics,
         .hero, .grid, .two-up {{
           grid-template-columns: 1fr;
+        }}
+        .topbar {{
+          align-items: flex-start;
+          flex-direction: column;
         }}
         .shell {{
           padding: 28px 16px 36px;
         }}
-        .hero-copy, .status-card {{
+        .hero-copy, .status-card, .request-card {{
           padding: 22px;
         }}
       }}
@@ -424,45 +526,77 @@ async def home():
   </head>
   <body>
     <main class="shell">
-      <section class="signal-bar">
-        <div class="signal"><label>Mode</label><span>Multi-task benchmark</span></div>
-        <div class="signal"><label>Constraints</label><span>25 emails / 8 replies</span></div>
-        <div class="signal"><label>Scoring</label><span>Dense reward + deterministic grader</span></div>
-        <div class="signal"><label>Transport</label><span>Cookie or x-session-id</span></div>
-      </section>
-      <section class="hero">
-        <div class="panel hero-copy">
-          <div class="eyebrow">Inbox Ops Console · OpenEnv</div>
-          <h1>Email Triage OpenEnv</h1>
-          <p class="lede">
-            A thread-aware inbox operations benchmark for evaluating agents under realistic workplace pressure.
-            It mixes urgent incidents, executive coordination, budget approvals, duplicate threads, and hard
-            response-budget tradeoffs through a single reproducible API.
-          </p>
-          <div class="hero-actions">
-            <a class="button primary" href="/health">Health</a>
-            <a class="button" href="/tasks">Tasks</a>
-            <a class="button" href="https://huggingface.co/spaces/abhinavgautam01/my-env" target="_blank" rel="noreferrer">Space Repo</a>
+      <header class="topbar">
+        <div class="brand">
+          <div class="mark" aria-hidden="true"></div>
+          <div class="brand-copy">
+            <strong>Email Triage OpenEnv</strong>
+            <span>Docs-first benchmark runtime</span>
           </div>
         </div>
-        <aside class="panel status-card">
-          <div class="status-row"><strong>Status</strong><span class="status-value">healthy</span></div>
-          <div class="status-row"><strong>Version</strong><span class="status-value">0.1.0</span></div>
-          <div class="status-row"><strong>SDK</strong><span class="status-value">docker / FastAPI</span></div>
-          <div class="status-row"><strong>App Port</strong><span class="status-value">8000</span></div>
-          <div class="status-row"><strong>Sessions</strong><span class="status-value">isolated per client</span></div>
-          <div class="note">
-            Public users are isolated by per-client session cookies. Call <code>/reset</code> first,
-            then reuse the same client for <code>/step</code> and <code>/state</code>. Non-browser clients
-            can also pass <code>x-session-id</code>.
+        <nav class="nav-links">
+          <a class="primary" href="/docs">Open API Docs</a>
+          <a href="/tasks">Task Catalog</a>
+          <a href="/health">Health</a>
+        </nav>
+      </header>
+
+      <section class="metrics">
+        <div class="metric"><label>Mode</label><span>Multi-task benchmark</span></div>
+        <div class="metric"><label>Hard Mode</label><span>25 emails / 8 replies</span></div>
+        <div class="metric"><label>Transport</label><span>Cookie or x-session-id</span></div>
+        <div class="metric"><label>Grading</label><span>Deterministic, 0.0-1.0</span></div>
+      </section>
+
+      <section class="hero">
+        <div class="panel hero-copy">
+          <div class="eyebrow">Dark API Portal · OpenEnv</div>
+          <h1>Email Triage OpenEnv</h1>
+          <p class="lede">
+            A thread-aware benchmark for inbox decision-making under real workplace pressure. It combines incident
+            response, executive coordination, budget approvals, duplicate threads, and reply-budget tradeoffs
+            behind a single OpenEnv-compatible API.
+          </p>
+          <div class="hero-actions">
+            <a class="primary" href="/docs">Launch Docs</a>
+            <a href="/tasks">Browse Tasks</a>
+            <a href="https://huggingface.co/spaces/abhinavgautam01/my-env" target="_blank" rel="noreferrer">Space Repo</a>
           </div>
+          <p class="footer-note">Use <code>/docs</code> for interactive API exploration, or call <code>/reset</code>, <code>/step</code>, and <code>/state</code> directly.</p>
+        </div>
+        <aside class="aside-stack">
+          <section class="panel status-card">
+            <div class="status-row"><strong>Status</strong><span class="status-value">healthy</span></div>
+            <div class="status-row"><strong>Version</strong><span class="status-value">0.1.0</span></div>
+            <div class="status-row"><strong>SDK</strong><span class="status-value">docker / FastAPI</span></div>
+            <div class="status-row"><strong>Sessions</strong><span class="status-value">isolated per client</span></div>
+            <div class="status-row"><strong>Spec</strong><span class="status-value">OpenEnv</span></div>
+          </section>
+          <section class="panel request-card">
+            <h3>Session Model</h3>
+            <p>Start with <code>/reset</code>. Browsers reuse the secure cookie automatically. Programmatic clients can also pass the returned <code>session_id</code> as <code>x-session-id</code>.</p>
+            <pre>POST /reset
+GET  /state
+POST /step</pre>
+            <div class="note">Public traffic is isolated. One client cannot read or mutate another client’s episode state.</div>
+          </section>
         </aside>
       </section>
 
-      <h2>Tasks</h2>
+      <div class="section-head">
+        <div>
+          <h2>Tasks</h2>
+          <p>Three deterministic tasks cover classification, ranking, and high-pressure inbox triage with thread-level dependencies.</p>
+        </div>
+      </div>
       <section class="grid">{tasks_markup}</section>
 
-      <h2>Endpoints</h2>
+      <div class="section-head">
+        <div>
+          <h2>Endpoints</h2>
+          <p>The landing page stays minimal, but the API surface is complete and interactive docs are available at <code>/docs</code>.</p>
+        </div>
+      </div>
       <section class="grid">
         <article class="endpoint-card"><h3>GET /health</h3><p>Runtime heartbeat and active session count.</p></article>
         <article class="endpoint-card"><h3>GET /tasks</h3><p>Available benchmark tasks with difficulty and email count.</p></article>
@@ -472,7 +606,12 @@ async def home():
         <article class="endpoint-card"><h3>openenv.yaml</h3><p>Typed action and observation contract for validation.</p></article>
       </section>
 
-      <h2>Quick Start</h2>
+      <div class="section-head">
+        <div>
+          <h2>Quick Start</h2>
+          <p>Minimal examples for calling the live environment directly from curl or any HTTP client.</p>
+        </div>
+      </div>
       <section class="two-up">
         <pre>curl -X POST /reset \\
   -H "Content-Type: application/json" \\
