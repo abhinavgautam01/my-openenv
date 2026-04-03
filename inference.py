@@ -6,7 +6,7 @@ MANDATORY - Before running, ensure the following environment variables are set:
 - API_BASE_URL: The API endpoint for the LLM (default: https://router.huggingface.co/v1)
 - MODEL_NAME: The model identifier to use (default: Qwen/Qwen2.5-72B-Instruct)
 - HF_TOKEN: Your Hugging Face / API key
-- LOCAL_IMAGE_NAME: Docker image name for the environment
+- LOCAL_IMAGE_NAME: Docker image name for the environment (or IMAGE_NAME for compatibility)
 
 STDOUT FORMAT:
 The script emits exactly three line types:
@@ -31,10 +31,10 @@ from server.models import EmailTriageAction, Email, TaskType
 
 
 # Configuration from environment
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY") or os.getenv("OPENAI_API_KEY")
+HF_TOKEN = os.getenv("HF_TOKEN")
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
-LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME") or os.getenv("IMAGE_NAME", "email-triage-openenv:latest")
+LOCAL_IMAGE_NAME = os.getenv("LOCAL_IMAGE_NAME") or os.getenv("IMAGE_NAME")
 
 # Task configuration
 TASK_NAME = os.getenv("EMAIL_TRIAGE_TASK", "classification")
@@ -578,12 +578,16 @@ async def main():
     import sys
     
     # Check for API key
-    if not API_KEY:
-        print("No API key found. Set HF_TOKEN, API_KEY, or OPENAI_API_KEY.", file=sys.stderr, flush=True)
+    if not HF_TOKEN:
+        print("No HF token found. Set HF_TOKEN.", file=sys.stderr, flush=True)
+        sys.exit(1)
+
+    if not LOCAL_IMAGE_NAME:
+        print("No image name found. Set LOCAL_IMAGE_NAME or IMAGE_NAME.", file=sys.stderr, flush=True)
         sys.exit(1)
     
     # Initialize clients
-    openai_client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    openai_client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
     
     # Determine which tasks to run
     tasks_to_run = os.getenv("EMAIL_TRIAGE_TASKS") or os.getenv("EMAIL_TRIAGE_TASK") or "all"
