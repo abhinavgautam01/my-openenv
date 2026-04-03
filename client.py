@@ -52,6 +52,7 @@ class EmailTriageEnv:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self._client: Optional[httpx.AsyncClient] = None
+        self._session_id: Optional[str] = None
     
     async def __aenter__(self) -> "EmailTriageEnv":
         """Async context manager entry."""
@@ -95,6 +96,7 @@ class EmailTriageEnv:
         response.raise_for_status()
         
         data = response.json()
+        self._session_id = data.get("info", {}).get("session_id")
         
         return StepResult(
             observation=EmailTriageObservation(**data["observation"]),
@@ -130,7 +132,8 @@ class EmailTriageEnv:
         if action.ranking is not None:
             payload["ranking"] = action.ranking
         
-        response = await self._client.post("/step", json=payload)
+        headers = {"x-session-id": self._session_id} if self._session_id else None
+        response = await self._client.post("/step", json=payload, headers=headers)
         response.raise_for_status()
         
         data = response.json()
@@ -152,7 +155,8 @@ class EmailTriageEnv:
         if self._client is None:
             raise RuntimeError("Client not initialized. Use 'async with' context manager.")
         
-        response = await self._client.get("/state")
+        headers = {"x-session-id": self._session_id} if self._session_id else None
+        response = await self._client.get("/state", headers=headers)
         response.raise_for_status()
         
         return response.json()
@@ -193,6 +197,7 @@ class EmailTriageEnvSync:
     ):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self._session_id: Optional[str] = None
         self._client = httpx.Client(
             base_url=self.base_url,
             timeout=self.timeout,
@@ -214,6 +219,7 @@ class EmailTriageEnvSync:
         response.raise_for_status()
         
         data = response.json()
+        self._session_id = data.get("info", {}).get("session_id")
         
         return StepResult(
             observation=EmailTriageObservation(**data["observation"]),
@@ -238,7 +244,8 @@ class EmailTriageEnvSync:
         if action.ranking is not None:
             payload["ranking"] = action.ranking
         
-        response = self._client.post("/step", json=payload)
+        headers = {"x-session-id": self._session_id} if self._session_id else None
+        response = self._client.post("/step", json=payload, headers=headers)
         response.raise_for_status()
         
         data = response.json()
@@ -252,7 +259,8 @@ class EmailTriageEnvSync:
     
     def state(self) -> Dict[str, Any]:
         """Get current environment state."""
-        response = self._client.get("/state")
+        headers = {"x-session-id": self._session_id} if self._session_id else None
+        response = self._client.get("/state", headers=headers)
         response.raise_for_status()
         return response.json()
     

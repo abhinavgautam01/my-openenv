@@ -17,7 +17,7 @@ from datetime import datetime
 from uuid import uuid4
 import logging
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
@@ -198,14 +198,15 @@ async def home():
     <style>
       :root {{
         color-scheme: dark;
-        --bg: #08111f;
-        --panel: rgba(10, 20, 38, 0.88);
-        --panel-strong: rgba(15, 28, 50, 0.98);
-        --border: rgba(131, 170, 255, 0.22);
-        --text: #eef3ff;
-        --muted: #aebcd8;
-        --accent: #61d3ff;
-        --accent-2: #8ef7c0;
+        --bg: #071018;
+        --panel: rgba(7, 19, 31, 0.9);
+        --panel-strong: rgba(10, 24, 40, 0.98);
+        --border: rgba(111, 231, 255, 0.14);
+        --text: #edf6ff;
+        --muted: #9bb1c9;
+        --accent: #6fe7ff;
+        --accent-2: #ffd166;
+        --accent-3: #9effd5;
         --shadow: 0 28px 80px rgba(0, 0, 0, 0.36);
       }}
       * {{ box-sizing: border-box; }}
@@ -214,15 +215,42 @@ async def home():
         font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
         color: var(--text);
         background:
-          radial-gradient(circle at top left, rgba(97, 211, 255, 0.18), transparent 30%),
-          radial-gradient(circle at top right, rgba(142, 247, 192, 0.14), transparent 28%),
-          linear-gradient(160deg, #06101d 0%, #08111f 48%, #0d1730 100%);
+          radial-gradient(circle at 0% 0%, rgba(111, 231, 255, 0.16), transparent 28%),
+          radial-gradient(circle at 100% 0%, rgba(255, 209, 102, 0.12), transparent 26%),
+          radial-gradient(circle at 50% 100%, rgba(158, 255, 213, 0.08), transparent 30%),
+          linear-gradient(155deg, #050b12 0%, #071018 45%, #0d1c2c 100%);
         min-height: 100vh;
       }}
       .shell {{
         max-width: 1100px;
         margin: 0 auto;
         padding: 48px 24px 56px;
+      }}
+      .signal-bar {{
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin-bottom: 18px;
+      }}
+      .signal {{
+        padding: 14px 16px;
+        border-radius: 18px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.035);
+        box-shadow: var(--shadow);
+      }}
+      .signal label {{
+        display: block;
+        margin-bottom: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }}
+      .signal span {{
+        font-family: "IBM Plex Mono", monospace;
+        color: var(--accent-3);
+        font-size: 0.98rem;
       }}
       .hero {{
         display: grid;
@@ -246,7 +274,7 @@ async def home():
         align-items: center;
         padding: 8px 12px;
         border-radius: 999px;
-        background: rgba(97, 211, 255, 0.12);
+        background: rgba(111, 231, 255, 0.12);
         color: var(--accent);
         font-size: 13px;
         letter-spacing: 0.04em;
@@ -283,8 +311,8 @@ async def home():
         background: rgba(255, 255, 255, 0.04);
       }}
       .button.primary {{
-        background: linear-gradient(135deg, rgba(97, 211, 255, 0.22), rgba(142, 247, 192, 0.18));
-        border-color: rgba(142, 247, 192, 0.28);
+        background: linear-gradient(135deg, rgba(111, 231, 255, 0.18), rgba(255, 209, 102, 0.16));
+        border-color: rgba(255, 209, 102, 0.22);
       }}
       .status-card {{
         padding: 24px;
@@ -304,7 +332,7 @@ async def home():
       }}
       .status-value {{
         font-family: "IBM Plex Mono", monospace;
-        color: var(--accent-2);
+        color: var(--accent-3);
       }}
       .grid {{
         display: grid;
@@ -329,7 +357,7 @@ async def home():
         display: inline-block;
         padding: 6px 10px;
         border-radius: 999px;
-        background: rgba(97, 211, 255, 0.12);
+        background: rgba(111, 231, 255, 0.12);
         color: var(--accent);
         font-size: 12px;
         text-transform: uppercase;
@@ -376,11 +404,12 @@ async def home():
         margin-top: 18px;
         padding: 16px 18px;
         border-radius: 16px;
-        border: 1px solid rgba(142, 247, 192, 0.24);
-        background: rgba(142, 247, 192, 0.08);
-        color: #d9ffef;
+        border: 1px solid rgba(255, 209, 102, 0.24);
+        background: rgba(255, 209, 102, 0.08);
+        color: #fff2c6;
       }}
       @media (max-width: 900px) {{
+        .signal-bar,
         .hero, .grid, .two-up {{
           grid-template-columns: 1fr;
         }}
@@ -395,14 +424,20 @@ async def home():
   </head>
   <body>
     <main class="shell">
+      <section class="signal-bar">
+        <div class="signal"><label>Mode</label><span>Multi-task benchmark</span></div>
+        <div class="signal"><label>Constraints</label><span>25 emails / 8 replies</span></div>
+        <div class="signal"><label>Scoring</label><span>Dense reward + deterministic grader</span></div>
+        <div class="signal"><label>Transport</label><span>Cookie or x-session-id</span></div>
+      </section>
       <section class="hero">
         <div class="panel hero-copy">
-          <div class="eyebrow">OpenEnv Benchmark · Email Triage</div>
+          <div class="eyebrow">Inbox Ops Console · OpenEnv</div>
           <h1>Email Triage OpenEnv</h1>
           <p class="lede">
-            A thread-aware inbox management environment for agent evaluation. The API supports
-            classification, ranking, and full inbox triage with response-budget constraints,
-            duplicate handling, and deterministic graders.
+            A thread-aware inbox operations benchmark for evaluating agents under realistic workplace pressure.
+            It mixes urgent incidents, executive coordination, budget approvals, duplicate threads, and hard
+            response-budget tradeoffs through a single reproducible API.
           </p>
           <div class="hero-actions">
             <a class="button primary" href="/health">Health</a>
@@ -413,12 +448,13 @@ async def home():
         <aside class="panel status-card">
           <div class="status-row"><strong>Status</strong><span class="status-value">healthy</span></div>
           <div class="status-row"><strong>Version</strong><span class="status-value">0.1.0</span></div>
-          <div class="status-row"><strong>SDK</strong><span class="status-value">docker</span></div>
+          <div class="status-row"><strong>SDK</strong><span class="status-value">docker / FastAPI</span></div>
           <div class="status-row"><strong>App Port</strong><span class="status-value">8000</span></div>
-          <div class="status-row"><strong>Sessions</strong><span class="status-value">cookie-backed</span></div>
+          <div class="status-row"><strong>Sessions</strong><span class="status-value">isolated per client</span></div>
           <div class="note">
             Public users are isolated by per-client session cookies. Call <code>/reset</code> first,
-            then reuse the same client for <code>/step</code> and <code>/state</code>.
+            then reuse the same client for <code>/step</code> and <code>/state</code>. Non-browser clients
+            can also pass <code>x-session-id</code>.
           </div>
         </aside>
       </section>
@@ -432,7 +468,7 @@ async def home():
         <article class="endpoint-card"><h3>GET /tasks</h3><p>Available benchmark tasks with difficulty and email count.</p></article>
         <article class="endpoint-card"><h3>GET /state</h3><p>Current episode state for your session cookie.</p></article>
         <article class="endpoint-card"><h3>POST /reset</h3><p>Start a new episode and attach a session cookie.</p></article>
-        <article class="endpoint-card"><h3>POST /step</h3><p>Apply one action and receive observation, reward, and grade details.</p></article>
+        <article class="endpoint-card"><h3>POST /step</h3><p>Apply one action and receive observation, reward, and final grade details.</p></article>
         <article class="endpoint-card"><h3>openenv.yaml</h3><p>Typed action and observation contract for validation.</p></article>
       </section>
 
@@ -502,7 +538,7 @@ async def reset(request: Request, reset_request: Optional[ResetRequest] = None):
         max_age=SESSION_TTL_SECONDS,
         httponly=True,
         samesite="lax",
-        secure=True,
+        secure=request.url.scheme == "https",
     )
     return response
 

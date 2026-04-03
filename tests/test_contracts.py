@@ -46,8 +46,12 @@ class StubHTTPClient:
         self.payload = payload
         self.requests = []
 
-    def post(self, path, json):
-        self.requests.append((path, json))
+    def post(self, path, json, headers=None):
+        self.requests.append((path, json, headers))
+        return StubResponse(self.payload)
+
+    def get(self, path, headers=None):
+        self.requests.append((path, None, headers))
         return StubResponse(self.payload)
 
     def close(self):
@@ -83,6 +87,18 @@ def test_full_triage_observation_tracks_incremental_and_cumulative_reward():
     assert first.cumulative_reward == pytest.approx(first.reward)
     assert second.reward > 0.0
     assert second.cumulative_reward == pytest.approx(first.reward + second.reward)
+
+
+def test_classification_correct_action_marks_last_action_result_correct():
+    env = EmailTriageEnvironment()
+    env.reset(task_type="classification", seed=42)
+    scenario = env.get_ground_truth()
+    gt = scenario.ground_truth[0]
+
+    result = env.step(EmailTriageAction(email_id=gt.email_id, category=gt.correct_category))
+
+    assert result.reward == pytest.approx(1.0)
+    assert result.last_action_result == "correct"
 
 
 def test_tasks_endpoint_matches_task_config():
@@ -164,6 +180,38 @@ def test_sync_client_forwards_ranking_field():
     env_client.step(action)
 
     assert stub_client.requests[0][1]["ranking"] == ["e1", "e2", "e3"]
+
+
+def test_sync_client_reuses_session_id_header_after_reset():
+    payload = {
+        "observation": {
+            "task_id": "task_1",
+            "task_type": "classification",
+            "emails": [],
+            "current_time": "2024-01-15T09:00:00",
+            "emails_processed": 0,
+            "emails_remaining": 1,
+            "time_budget_remaining": None,
+            "last_action_result": None,
+            "done": False,
+            "reward": 0.0,
+            "cumulative_reward": 0.0,
+        },
+        "reward": 0.0,
+        "done": False,
+        "info": {"session_id": "sess_123"},
+    }
+    stub_client = StubHTTPClient(payload)
+
+    env_client = EmailTriageEnvSync("http://localhost:8000")
+    env_client._client = stub_client
+
+    env_client.reset(task_type="classification", seed=42)
+    env_client.step(EmailTriageAction(email_id="e1", category="INFO"))
+    env_client.state()
+
+    assert stub_client.requests[1][2] == {"x-session-id": "sess_123"}
+    assert stub_client.requests[2][2] == {"x-session-id": "sess_123"}
 
 
 def test_normalize_ranking_decision_fills_missing_ids_and_removes_duplicates():

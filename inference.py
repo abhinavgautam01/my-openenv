@@ -52,6 +52,8 @@ class EmailTriageEnv:
     def __init__(self, container=None):
         self.container = container
         self.base_url = None
+        self._client = None
+        self._session_id = None
     
     @classmethod
     async def from_docker_image(cls, image_name: str):
@@ -93,6 +95,7 @@ class EmailTriageEnv:
             
             env = cls(container=container_id)
             env.base_url = base_url
+            env._client = httpx.AsyncClient(base_url=base_url, timeout=30.0)
             return env
             
         except subprocess.CalledProcessError as e:
@@ -101,46 +104,52 @@ class EmailTriageEnv:
     
     async def reset(self, task_type: str, seed: int = 42):
         """Reset environment."""
-        import httpx
+        if self._client is None:
+            raise RuntimeError("Environment client is not initialized")
+
+        response = await self._client.post(
+            "/reset",
+            json={"task_type": task_type, "seed": seed}
+        )
+        response.raise_for_status()
+        data = response.json()
+        self._session_id = data.get("info", {}).get("session_id")
         
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                f"{self.base_url}/reset",
-                json={"task_type": task_type, "seed": seed}
-            )
-            response.raise_for_status()
-            data = response.json()
-            
-            from models import EmailTriageObservation
-            return StepResult(
-                observation=EmailTriageObservation(**data["observation"]),
-                reward=data["reward"],
-                done=data["done"],
-                info=data["info"]
-            )
+        from models import EmailTriageObservation
+        return StepResult(
+            observation=EmailTriageObservation(**data["observation"]),
+            reward=data["reward"],
+            done=data["done"],
+            info=data["info"]
+        )
     
     async def step(self, action: EmailTriageAction):
         """Take environment step."""
-        import httpx
+        if self._client is None:
+            raise RuntimeError("Environment client is not initialized")
+
+        headers = {"x-session-id": self._session_id} if self._session_id else None
+        response = await self._client.post(
+            "/step",
+            json=action.model_dump(),
+            headers=headers,
+        )
+        response.raise_for_status()
+        data = response.json()
         
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                f"{self.base_url}/step",
-                json=action.model_dump()
-            )
-            response.raise_for_status()
-            data = response.json()
-            
-            from models import EmailTriageObservation
-            return StepResult(
-                observation=EmailTriageObservation(**data["observation"]),
-                reward=data["reward"],
-                done=data["done"],
-                info=data["info"]
-            )
+        from models import EmailTriageObservation
+        return StepResult(
+            observation=EmailTriageObservation(**data["observation"]),
+            reward=data["reward"],
+            done=data["done"],
+            info=data["info"]
+        )
     
     async def close(self):
         """Stop container."""
+        if self._client:
+            await self._client.aclose()
+            self._client = None
         if self.container:
             import subprocess
             try:
@@ -429,10 +438,10 @@ def create_action(
 
 def format_action_for_log(action: EmailTriageAction, task_type: TaskType) -> str:
     """Format action for logging."""
+    if task_type == "ranking":
+        return json.dumps({"ranking": action.ranking or []}, separators=(",", ":"))
     if task_type == "classification":
         return f"classify({action.email_id},{action.category})"
-    elif task_type == "ranking":
-        return f"prioritize({action.email_id},{action.priority})"
     else:
         return f"triage({action.email_id},{action.priority},{action.category},{action.disposition})"
 
@@ -495,7 +504,7 @@ async def run_task(
                 if last_action_result.startswith("error"):
                     error = last_action_result
                 
-                action_str = f"rank({len(decision.get('ranking', []))} emails)"
+                action_str = format_action_for_log(action, task_type)
                 log_step(
                     step=1,
                     action=action_str,

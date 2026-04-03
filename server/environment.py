@@ -419,6 +419,7 @@ class EmailTriageEnvironment(Environment):
         
         # Scale reward for simpler tasks
         if task_type == "classification":
+            self._last_action_result = "correct" if action.category == gt.correct_category else "incorrect"
             # Classification only uses category, normalize
             reward = reward / 0.3 if reward > 0 else 0.0
             reward = min(1.0, reward)  # Cap at 1.0
