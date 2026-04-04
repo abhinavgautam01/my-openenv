@@ -8,6 +8,7 @@ Provides HTTP endpoints:
 - GET /health - Health check
 """
 
+import json
 import sys
 import time
 import threading
@@ -185,6 +186,7 @@ async def home():
         """
         for task_name, config in TASK_CONFIG.items()
     )
+    tasks_json = json.dumps(TASK_CONFIG)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -195,19 +197,21 @@ async def home():
     <style>
       :root {{
         color-scheme: dark;
-        --bg: #05070c;
-        --bg-soft: #0b1020;
-        --panel: rgba(11, 16, 32, 0.88);
-        --panel-strong: rgba(14, 20, 38, 0.98);
-        --panel-alt: rgba(17, 25, 49, 0.96);
-        --border: rgba(126, 146, 255, 0.18);
-        --text: #f3f6ff;
-        --muted: #96a3c6;
-        --accent: #80a9ff;
-        --accent-2: #59f1c8;
-        --accent-3: #ffc857;
-        --danger: #ff7a90;
-        --shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+        --bg: #06070b;
+        --bg-soft: #0f1524;
+        --panel: rgba(10, 16, 30, 0.9);
+        --panel-strong: rgba(16, 22, 40, 0.96);
+        --panel-alt: rgba(18, 26, 48, 0.92);
+        --border: rgba(122, 150, 255, 0.18);
+        --text: #f4f7ff;
+        --muted: #9aa8c9;
+        --accent: #83a9ff;
+        --accent-2: #67ebc7;
+        --accent-3: #ffd166;
+        --danger: #ff7b93;
+        --ok: #5de1b8;
+        --warning: #ffbf69;
+        --shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
       }}
       * {{ box-sizing: border-box; }}
       body {{
@@ -215,14 +219,14 @@ async def home():
         font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
         color: var(--text);
         background:
-          radial-gradient(circle at 12% 0%, rgba(128, 169, 255, 0.16), transparent 24%),
-          radial-gradient(circle at 88% 0%, rgba(89, 241, 200, 0.10), transparent 20%),
-          radial-gradient(circle at 50% 100%, rgba(255, 200, 87, 0.08), transparent 22%),
-          linear-gradient(180deg, #04060a 0%, #070b14 45%, #0b1120 100%);
+          radial-gradient(circle at 10% 0%, rgba(131, 169, 255, 0.16), transparent 26%),
+          radial-gradient(circle at 92% 8%, rgba(103, 235, 199, 0.1), transparent 22%),
+          radial-gradient(circle at 50% 100%, rgba(255, 209, 102, 0.08), transparent 22%),
+          linear-gradient(180deg, #05070b 0%, #09101d 48%, #10192d 100%);
         min-height: 100vh;
       }}
       .shell {{
-        max-width: 1180px;
+        max-width: 1260px;
         margin: 0 auto;
         padding: 32px 24px 56px;
       }}
@@ -285,7 +289,15 @@ async def home():
         gap: 10px;
       }}
       .nav-links a,
-      .hero-actions a {{
+      .hero-actions a,
+      button,
+      select,
+      textarea {{
+        font: inherit;
+      }}
+      .nav-links a,
+      .hero-actions a,
+      .button {{
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -422,7 +434,7 @@ async def home():
         gap: 18px;
         margin-top: 20px;
       }}
-      .task-card, .endpoint-card {{
+      .task-card, .endpoint-card, .state-card, .demo-card, .result-card, .email-card {{
         background: rgba(255, 255, 255, 0.035);
         border: 1px solid var(--border);
         border-radius: 20px;
@@ -482,6 +494,170 @@ async def home():
         gap: 18px;
         margin-top: 20px;
       }}
+      .workspace {{
+        display: grid;
+        grid-template-columns: 0.92fr 1.08fr;
+        gap: 18px;
+        margin-top: 22px;
+      }}
+      .demo-card,
+      .state-card,
+      .result-card {{
+        background: var(--panel-strong);
+      }}
+      .controls {{
+        display: grid;
+        gap: 14px;
+      }}
+      .field {{
+        display: grid;
+        gap: 8px;
+      }}
+      .field label,
+      .meta-label {{
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }}
+      select,
+      textarea {{
+        width: 100%;
+        border-radius: 14px;
+        border: 1px solid rgba(126, 146, 255, 0.2);
+        background: rgba(4, 8, 18, 0.9);
+        color: var(--text);
+        padding: 12px 14px;
+        outline: none;
+      }}
+      textarea {{
+        min-height: 112px;
+        resize: vertical;
+        font-family: "IBM Plex Mono", monospace;
+        line-height: 1.5;
+      }}
+      .button-row {{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }}
+      button,
+      .button {{
+        cursor: pointer;
+        border-radius: 14px;
+        border: 1px solid var(--border);
+        padding: 11px 14px;
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.04);
+        text-decoration: none;
+      }}
+      button.primary {{
+        background: linear-gradient(135deg, rgba(128, 169, 255, 0.2), rgba(89, 241, 200, 0.14));
+      }}
+      button.warn {{
+        background: linear-gradient(135deg, rgba(255, 209, 102, 0.15), rgba(255, 123, 147, 0.08));
+      }}
+      .explainer {{
+        margin-top: 16px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        border: 1px solid rgba(103, 235, 199, 0.18);
+        background: rgba(103, 235, 199, 0.06);
+        color: #c9fff0;
+      }}
+      .state-grid {{
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }}
+      .state-chip {{
+        border-radius: 14px;
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.025);
+      }}
+      .state-chip strong {{
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }}
+      .state-chip span {{
+        font-family: "IBM Plex Mono", monospace;
+      }}
+      .email-list {{
+        display: grid;
+        gap: 12px;
+      }}
+      .email-card {{
+        background: rgba(255, 255, 255, 0.03);
+      }}
+      .email-head {{
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: start;
+        margin-bottom: 10px;
+      }}
+      .email-head h3 {{
+        margin: 0;
+        font-size: 1rem;
+      }}
+      .email-sub {{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 10px;
+      }}
+      .badge {{
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 5px 10px;
+        background: rgba(128, 169, 255, 0.12);
+        color: var(--accent);
+        font-size: 12px;
+      }}
+      .email-body {{
+        color: var(--muted);
+        font-size: 0.94rem;
+        line-height: 1.6;
+      }}
+      .mono {{
+        font-family: "IBM Plex Mono", monospace;
+      }}
+      .empty {{
+        color: var(--muted);
+        padding: 18px;
+        border: 1px dashed rgba(126, 146, 255, 0.22);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.02);
+      }}
+      .result-top {{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 14px;
+      }}
+      .result-value {{
+        font-size: 1.6rem;
+        font-weight: 700;
+      }}
+      .good {{ color: var(--ok); }}
+      .bad {{ color: var(--danger); }}
+      .neutral {{ color: var(--accent-3); }}
+      .json-box {{
+        margin-top: 14px;
+      }}
+      .json-box pre {{
+        min-height: 160px;
+      }}
+      .hidden {{
+        display: none;
+      }}
       .note {{
         margin-top: 18px;
         padding: 16px 18px;
@@ -508,7 +684,7 @@ async def home():
       @media (max-width: 900px) {{
         .topbar,
         .metrics,
-        .hero, .grid, .two-up {{
+        .hero, .grid, .two-up, .workspace, .state-grid {{
           grid-template-columns: 1fr;
         }}
         .topbar {{
@@ -578,9 +754,141 @@ async def home():
             <pre>POST /reset
 GET  /state
 POST /step</pre>
-            <div class="note">Public traffic is isolated. One client cannot read or mutate another client’s episode state.</div>
+            <div class="note">Public traffic is isolated. One client cannot read or mutate another client’s episode state. This homepage only explores the environment. It does not call an LLM or depend on any inference provider.</div>
           </section>
         </aside>
+      </section>
+
+      <div class="section-head">
+        <div>
+          <h2>Manual Explorer</h2>
+          <p>Play all three tasks directly from the browser. Reset an episode, inspect the observation, submit one action, and inspect reward, done state, and grading details after each step.</p>
+        </div>
+      </div>
+      <section class="workspace">
+        <div class="demo-card">
+          <div class="controls">
+            <div class="field">
+              <label for="task-select">Task</label>
+              <select id="task-select">
+                <option value="classification">classification</option>
+                <option value="ranking">ranking</option>
+                <option value="full_triage">full_triage</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="seed-input">Seed</label>
+              <select id="seed-input">
+                <option value="42">42</option>
+                <option value="7">7</option>
+                <option value="123">123</option>
+                <option value="2026">2026</option>
+              </select>
+            </div>
+            <div class="button-row">
+              <button class="primary" id="reset-btn" type="button">Reset Task</button>
+              <button id="state-btn" type="button">Refresh State</button>
+            </div>
+            <div class="explainer">
+              Browser actions call your live environment only. No agent is invoked here. Use this to inspect task dynamics, edge cases, and session behavior manually.
+            </div>
+            <div class="field">
+              <label for="email-select">Email Target</label>
+              <select id="email-select"></select>
+            </div>
+            <div class="field" id="classification-field">
+              <label for="classification-category">Category</label>
+              <select id="classification-category">
+                <option value="URGENT">URGENT</option>
+                <option value="ACTION_REQUIRED">ACTION_REQUIRED</option>
+                <option value="INFO">INFO</option>
+                <option value="SPAM">SPAM</option>
+                <option value="PERSONAL">PERSONAL</option>
+              </select>
+            </div>
+            <div class="field hidden" id="ranking-field">
+              <label for="ranking-order">Ranking Order</label>
+              <textarea id="ranking-order" placeholder="One email id per line"></textarea>
+            </div>
+            <div class="field hidden" id="priority-field">
+              <label for="priority-select">Priority</label>
+              <select id="priority-select">
+                <option value="HIGH">HIGH</option>
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="LOW">LOW</option>
+              </select>
+            </div>
+            <div class="field hidden" id="triage-category-field">
+              <label for="triage-category">Category</label>
+              <select id="triage-category">
+                <option value="URGENT">URGENT</option>
+                <option value="ACTION_REQUIRED">ACTION_REQUIRED</option>
+                <option value="INFO">INFO</option>
+                <option value="SPAM">SPAM</option>
+                <option value="PERSONAL">PERSONAL</option>
+              </select>
+            </div>
+            <div class="field hidden" id="disposition-field">
+              <label for="disposition-select">Disposition</label>
+              <select id="disposition-select">
+                <option value="RESPOND">RESPOND</option>
+                <option value="DELEGATE">DELEGATE</option>
+                <option value="ARCHIVE">ARCHIVE</option>
+                <option value="DEFER">DEFER</option>
+              </select>
+            </div>
+            <div class="field hidden" id="response-field">
+              <label for="response-draft">Response Draft</label>
+              <textarea id="response-draft" placeholder="Optional response draft for RESPOND actions"></textarea>
+            </div>
+            <div class="button-row">
+              <button class="primary" id="step-btn" type="button">Submit Step</button>
+              <button class="warn" id="prefill-btn" type="button">Prefill Ranking</button>
+            </div>
+          </div>
+        </div>
+        <div class="state-card">
+          <div class="section-head">
+            <div>
+              <h2>Live Session</h2>
+              <p>Observation and compact episode state for the current browser session.</p>
+            </div>
+          </div>
+          <div class="state-grid">
+            <div class="state-chip"><strong>Episode</strong><span id="state-episode" class="mono">none</span></div>
+            <div class="state-chip"><strong>Task</strong><span id="state-task" class="mono">none</span></div>
+            <div class="state-chip"><strong>Processed</strong><span id="state-processed" class="mono">0</span></div>
+            <div class="state-chip"><strong>Remaining</strong><span id="state-remaining" class="mono">0</span></div>
+            <div class="state-chip"><strong>Cumulative Reward</strong><span id="state-cumulative" class="mono">0.00</span></div>
+            <div class="state-chip"><strong>Done</strong><span id="state-done" class="mono">true</span></div>
+          </div>
+          <div class="section-head">
+            <div>
+              <h2>Observation Emails</h2>
+              <p>The current observation is rendered below so you can inspect inbox state before each step.</p>
+            </div>
+          </div>
+          <div id="email-list" class="email-list">
+            <div class="empty">Reset a task to load observation emails.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="result-card" style="margin-top: 18px;">
+        <div class="section-head">
+          <div>
+            <h2>Step Result</h2>
+            <p>Reward, completion state, and raw grading details from the last action.</p>
+          </div>
+        </div>
+        <div class="result-top">
+          <span class="result-value neutral" id="result-reward">0.00</span>
+          <span class="badge" id="result-done">done: true</span>
+          <span class="badge" id="result-action">last_action_result: none</span>
+        </div>
+        <div class="json-box">
+          <pre id="result-json">{{"reward": 0.0, "done": true}}</pre>
+        </div>
       </section>
 
       <div class="section-head">
@@ -621,6 +929,189 @@ POST /step</pre>
   -d '{{"email_id":"e1","ranking":["e1","e2","e3","e4","e5","e6","e7","e8"]}}'</pre>
       </section>
     </main>
+    <script>
+      const taskConfig = {tasks_json};
+      let currentObservation = null;
+      let currentTaskType = "classification";
+
+      const taskSelect = document.getElementById("task-select");
+      const seedInput = document.getElementById("seed-input");
+      const emailSelect = document.getElementById("email-select");
+      const classificationField = document.getElementById("classification-field");
+      const rankingField = document.getElementById("ranking-field");
+      const priorityField = document.getElementById("priority-field");
+      const triageCategoryField = document.getElementById("triage-category-field");
+      const dispositionField = document.getElementById("disposition-field");
+      const responseField = document.getElementById("response-field");
+      const rankingOrder = document.getElementById("ranking-order");
+      const responseDraft = document.getElementById("response-draft");
+
+      function setResult(payload) {{
+        const reward = Number(payload.reward ?? 0);
+        const done = Boolean(payload.done);
+        const lastAction = payload.observation?.last_action_result ?? payload.info?.last_action_result ?? "none";
+        const rewardEl = document.getElementById("result-reward");
+        rewardEl.textContent = reward.toFixed(2);
+        rewardEl.className = "result-value " + (reward > 0.75 ? "good" : reward < 0 ? "bad" : "neutral");
+        document.getElementById("result-done").textContent = "done: " + String(done);
+        document.getElementById("result-action").textContent = "last_action_result: " + lastAction;
+        document.getElementById("result-json").textContent = JSON.stringify(payload, null, 2);
+      }}
+
+      function renderStatePayload(state) {{
+        document.getElementById("state-episode").textContent = state.episode_id || "none";
+        document.getElementById("state-task").textContent = state.task_type || "none";
+        document.getElementById("state-processed").textContent = String(state.emails_processed ?? 0);
+        document.getElementById("state-remaining").textContent = String(state.emails_remaining ?? 0);
+        document.getElementById("state-cumulative").textContent = Number(state.cumulative_reward ?? 0).toFixed(2);
+        document.getElementById("state-done").textContent = String(Boolean(state.done));
+      }}
+
+      function renderEmails(emails) {{
+        const list = document.getElementById("email-list");
+        if (!emails || emails.length === 0) {{
+          list.innerHTML = '<div class="empty">No visible emails remain in the current observation.</div>';
+          return;
+        }}
+        list.innerHTML = emails.map((email) => `
+          <article class="email-card">
+            <div class="email-head">
+              <div>
+                <h3>${{email.subject}}</h3>
+                <div class="email-sub">
+                  <span class="badge mono">${{email.id}}</span>
+                  <span class="badge">${{email.sender_importance}}</span>
+                  <span class="badge">${{email.sender_name}}</span>
+                  <span class="badge">${{email.thread_id || "single"}}</span>
+                </div>
+              </div>
+              <span class="count mono">${{new Date(email.timestamp).toLocaleString()}}</span>
+            </div>
+            <p class="email-body">${{email.body}}</p>
+          </article>
+        `).join("");
+      }}
+
+      function updateEmailSelector(emails) {{
+        emailSelect.innerHTML = "";
+        (emails || []).forEach((email) => {{
+          const option = document.createElement("option");
+          option.value = email.id;
+          option.textContent = `${{email.id}} - ${{email.subject}}`;
+          emailSelect.appendChild(option);
+        }});
+      }}
+
+      function syncControls() {{
+        currentTaskType = taskSelect.value;
+        classificationField.classList.toggle("hidden", currentTaskType !== "classification");
+        rankingField.classList.toggle("hidden", currentTaskType !== "ranking");
+        priorityField.classList.toggle("hidden", currentTaskType !== "full_triage");
+        triageCategoryField.classList.toggle("hidden", currentTaskType !== "full_triage");
+        dispositionField.classList.toggle("hidden", currentTaskType !== "full_triage");
+        responseField.classList.toggle("hidden", currentTaskType !== "full_triage");
+        document.getElementById("prefill-btn").classList.toggle("hidden", currentTaskType !== "ranking");
+      }}
+
+      async function refreshState() {{
+        const response = await fetch("/state", {{ credentials: "same-origin" }});
+        const data = await response.json();
+        renderStatePayload(data);
+      }}
+
+      function renderObservation(observation) {{
+        currentObservation = observation;
+        updateEmailSelector(observation.emails || []);
+        renderEmails(observation.emails || []);
+        if (currentTaskType === "ranking") {{
+          rankingOrder.value = (observation.emails || []).map((email) => email.id).join("\\n");
+        }}
+      }}
+
+      async function resetTask() {{
+        syncControls();
+        const body = {{
+          task_type: taskSelect.value,
+          seed: Number(seedInput.value),
+        }};
+        const response = await fetch("/reset", {{
+          method: "POST",
+          credentials: "same-origin",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify(body),
+        }});
+        const data = await response.json();
+        renderObservation(data.observation);
+        setResult(data);
+        await refreshState();
+      }}
+
+      function prefillRanking() {{
+        if (!currentObservation?.emails) {{
+          return;
+        }}
+        rankingOrder.value = currentObservation.emails.map((email) => email.id).join("\\n");
+      }}
+
+      async function submitStep() {{
+        const payload = {{
+          email_id: emailSelect.value || currentObservation?.emails?.[0]?.id || "e1",
+        }};
+
+        if (currentTaskType === "classification") {{
+          payload.category = document.getElementById("classification-category").value;
+        }} else if (currentTaskType === "ranking") {{
+          payload.ranking = rankingOrder.value
+            .split(/[,\\n]+/)
+            .map((item) => item.trim())
+            .filter(Boolean);
+        }} else {{
+          payload.priority = document.getElementById("priority-select").value;
+          payload.category = document.getElementById("triage-category").value;
+          payload.disposition = document.getElementById("disposition-select").value;
+          const draft = responseDraft.value.trim();
+          if (draft) {{
+            payload.response_draft = draft;
+          }}
+        }}
+
+        const response = await fetch("/step", {{
+          method: "POST",
+          credentials: "same-origin",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify(payload),
+        }});
+
+        const text = await response.text();
+        let data = {{}};
+        try {{
+          data = JSON.parse(text);
+        }} catch (error) {{
+          data = {{ detail: text, reward: 0.0, done: false }};
+        }}
+
+        if (!response.ok) {{
+          setResult(data);
+          return;
+        }}
+
+        renderObservation(data.observation);
+        setResult(data);
+        await refreshState();
+      }}
+
+      taskSelect.addEventListener("change", syncControls);
+      document.getElementById("reset-btn").addEventListener("click", () => void resetTask());
+      document.getElementById("state-btn").addEventListener("click", () => void refreshState());
+      document.getElementById("step-btn").addEventListener("click", () => void submitStep());
+      document.getElementById("prefill-btn").addEventListener("click", prefillRanking);
+      document.getElementById("disposition-select").addEventListener("change", (event) => {{
+        responseField.classList.toggle("hidden", currentTaskType !== "full_triage" || event.target.value !== "RESPOND");
+      }});
+
+      syncControls();
+      refreshState();
+    </script>
   </body>
 </html>"""
 
