@@ -575,6 +575,9 @@ async def home():
         flex-wrap: wrap;
         gap: 10px;
       }}
+      .button-row.compact {{
+        justify-content: flex-start;
+      }}
       .helper {{
         color: var(--muted);
         font-size: 0.92rem;
@@ -775,6 +778,9 @@ async def home():
       .hidden {{
         display: none;
       }}
+      .show-reset {{
+        animation: slideFadeIn 180ms ease;
+      }}
       .note {{
         margin-top: 18px;
         padding: 16px 18px;
@@ -801,6 +807,16 @@ async def home():
       @keyframes spin {{
         from {{ transform: rotate(0deg); }}
         to {{ transform: rotate(360deg); }}
+      }}
+      @keyframes slideFadeIn {{
+        from {{
+          opacity: 0;
+          transform: translateY(6px);
+        }}
+        to {{
+          opacity: 1;
+          transform: translateY(0);
+        }}
       }}
       @media (max-width: 900px) {{
         .topbar,
@@ -915,8 +931,7 @@ POST /step</pre>
                 </select>
               </div>
             </div>
-            <div class="button-row">
-              <button class="primary" id="reset-btn" type="button">Load Fresh Task</button>
+            <div class="button-row compact">
               <button id="state-btn" type="button">Refresh State</button>
             </div>
             <div class="explainer">
@@ -982,6 +997,7 @@ POST /step</pre>
             </div>
             <div class="button-row">
               <button class="primary" id="step-btn" type="button">Submit Step</button>
+              <button class="hidden" id="reset-btn" type="button">Reset Task</button>
               <button class="warn" id="prefill-btn" type="button">Prefill Ranking</button>
             </div>
           </div>
@@ -1121,7 +1137,7 @@ POST /step</pre>
           return;
         }}
         if (currentObservation?.done) {{
-          sessionHelper.textContent = "Episode complete. Change task or seed, or use Load Fresh Task to start another episode.";
+          sessionHelper.textContent = "Episode complete. Use Reset Task or change task or seed to start another episode.";
           return;
         }}
         if (currentTaskType === "ranking") {{
@@ -1131,21 +1147,14 @@ POST /step</pre>
         sessionHelper.textContent = "Session is active. You can inspect state, submit actions, and watch reward and grade details update after each step.";
       }}
 
-      function setBusy(button, busyLabel) {{
-        if (!button) {{
-          return;
-        }}
-        if (busyLabel) {{
-          button.dataset.originalLabel = button.textContent;
-          button.textContent = busyLabel;
-          button.classList.add("loading");
-          button.disabled = true;
-          return;
-        }}
-        button.textContent = button.dataset.originalLabel || button.textContent;
-        button.classList.remove("loading");
-        button.disabled = false;
-        updateStepButtonState();
+      function showResetButton() {{
+        resetButton.classList.remove("hidden");
+        resetButton.classList.add("show-reset");
+      }}
+
+      function hideResetButton() {{
+        resetButton.classList.add("hidden");
+        resetButton.classList.remove("show-reset");
       }}
 
       function renderStatePayload(state) {{
@@ -1229,7 +1238,7 @@ POST /step</pre>
       async function resetTask() {{
         const serial = ++resetSerial;
         syncControls();
-        setBusy(resetButton, "Loading Task");
+        hideResetButton();
         const body = {{
           task_type: taskSelect.value,
           seed: Number(seedInput.value),
@@ -1242,7 +1251,6 @@ POST /step</pre>
         }});
         const data = await response.json();
         if (serial !== resetSerial) {{
-          setBusy(resetButton, null);
           return;
         }}
         currentSessionId = data.info?.session_id || currentSessionId;
@@ -1250,7 +1258,6 @@ POST /step</pre>
         setResult(data);
         updateSessionBanner();
         await refreshState();
-        setBusy(resetButton, null);
       }}
 
       function prefillRanking() {{
@@ -1304,6 +1311,11 @@ POST /step</pre>
 
       function updateStepButtonState() {{
         stepButton.disabled = !canSubmitCurrentAction();
+      }}
+
+      function handleActionEdit() {{
+        hideResetButton();
+        updateStepButtonState();
       }}
 
       async function submitStep() {{
@@ -1365,6 +1377,7 @@ POST /step</pre>
             }};
           }}
           setResult(data);
+          showResetButton();
           updateSessionBanner();
           updateStepButtonState();
           return;
@@ -1372,6 +1385,7 @@ POST /step</pre>
 
         renderObservation(data.observation);
         setResult(data);
+        showResetButton();
         updateRankingHelper();
         updateSessionBanner();
         await refreshState();
@@ -1380,13 +1394,20 @@ POST /step</pre>
       taskSelect.addEventListener("change", () => void resetTask());
       seedInput.addEventListener("change", () => void resetTask());
       rankingOrder.addEventListener("input", updateRankingHelper);
-      rankingOrder.addEventListener("input", updateStepButtonState);
+      rankingOrder.addEventListener("input", handleActionEdit);
+      emailSelect.addEventListener("change", handleActionEdit);
+      document.getElementById("classification-category").addEventListener("change", handleActionEdit);
+      document.getElementById("priority-select").addEventListener("change", handleActionEdit);
+      document.getElementById("triage-category").addEventListener("change", handleActionEdit);
+      document.getElementById("disposition-select").addEventListener("change", handleActionEdit);
+      responseDraft.addEventListener("input", handleActionEdit);
       document.getElementById("reset-btn").addEventListener("click", () => void resetTask());
       document.getElementById("state-btn").addEventListener("click", () => void refreshState());
       document.getElementById("step-btn").addEventListener("click", () => void submitStep());
       document.getElementById("prefill-btn").addEventListener("click", prefillRanking);
       document.getElementById("disposition-select").addEventListener("change", (event) => {{
         responseField.classList.toggle("hidden", currentTaskType !== "full_triage" || event.target.value !== "RESPOND");
+        handleActionEdit();
       }});
 
       syncControls();
