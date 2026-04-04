@@ -960,7 +960,7 @@ POST /step</pre>
               </select>
             </div>
             <div class="field hidden" id="ranking-field">
-              <label for="ranking-order">Ranking Order</label>
+              <label for="ranking-order">Ranking Order: You can edit ranking to test..!</label>
               <textarea id="ranking-order" placeholder="One email id per line"></textarea>
               <div class="helper" id="ranking-helper">Ranking requires every visible email ID exactly once. Use <strong>Prefill Ranking</strong>, then reorder the lines.</div>
             </div>
