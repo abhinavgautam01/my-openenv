@@ -1120,6 +1120,10 @@ POST /step</pre>
           sessionHelper.textContent = "Choose a task and seed, then a fresh episode loads automatically. Ranking submit stays disabled until all visible ids are present exactly once.";
           return;
         }}
+        if (currentObservation?.done) {{
+          sessionHelper.textContent = "Episode complete. Change task or seed, or use Load Fresh Task to start another episode.";
+          return;
+        }}
         if (currentTaskType === "ranking") {{
           sessionHelper.textContent = "Ranking is a single-shot task. Keep one visible email id per line, with no duplicates or omissions, then submit once.";
           return;
@@ -1140,6 +1144,7 @@ POST /step</pre>
         }}
         button.textContent = button.dataset.originalLabel || button.textContent;
         button.classList.remove("loading");
+        button.disabled = false;
         updateStepButtonState();
       }}
 
@@ -1241,9 +1246,9 @@ POST /step</pre>
           return;
         }}
         currentSessionId = data.info?.session_id || currentSessionId;
-        updateSessionBanner();
         renderObservation(data.observation);
         setResult(data);
+        updateSessionBanner();
         await refreshState();
         setBusy(resetButton, null);
       }}
@@ -1272,7 +1277,7 @@ POST /step</pre>
         const submitted = normalizeRankingInput();
         const unique = [...new Set(submitted)];
         if (!expected.length) {{
-          rankingHelper.innerHTML = 'Reset a ranking task to load all visible email IDs.';
+          rankingHelper.innerHTML = 'Load a ranking task to populate all visible email IDs.';
           return;
         }}
         const isExact = submitted.length === expected.length && unique.length === expected.length && expected.every((id) => submitted.includes(id));
@@ -1282,7 +1287,7 @@ POST /step</pre>
       }}
 
       function canSubmitCurrentAction() {{
-        if (!currentSessionId || !currentObservation) {{
+        if (!currentSessionId || !currentObservation || currentObservation.done) {{
           return false;
         }}
         if (currentTaskType !== "ranking") {{
