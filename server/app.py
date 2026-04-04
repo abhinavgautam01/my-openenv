@@ -439,6 +439,12 @@ async def home():
         border: 1px solid var(--border);
         border-radius: 20px;
         padding: 20px;
+        transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+      }}
+      .task-card:hover, .endpoint-card:hover, .email-card:hover {{
+        transform: translateY(-2px);
+        border-color: rgba(131, 169, 255, 0.28);
+        background: rgba(255, 255, 255, 0.05);
       }}
       .task-meta {{
         display: flex;
@@ -509,6 +515,11 @@ async def home():
         display: grid;
         gap: 14px;
       }}
+      .controls-top {{
+        display: grid;
+        gap: 14px;
+        grid-template-columns: 1.15fr 0.85fr;
+      }}
       .field {{
         display: grid;
         gap: 8px;
@@ -523,12 +534,32 @@ async def home():
       select,
       textarea {{
         width: 100%;
-        border-radius: 14px;
-        border: 1px solid rgba(126, 146, 255, 0.2);
-        background: rgba(4, 8, 18, 0.9);
+        border-radius: 18px;
+        border: 1px solid rgba(126, 146, 255, 0.22);
+        background: linear-gradient(180deg, rgba(8, 12, 24, 0.96), rgba(10, 16, 30, 0.92));
         color: var(--text);
-        padding: 12px 14px;
+        padding: 14px 16px;
         outline: none;
+        transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+      }}
+      select {{
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        padding-right: 54px;
+        background-image:
+          linear-gradient(45deg, transparent 50%, rgba(131, 169, 255, 0.92) 50%),
+          linear-gradient(135deg, rgba(131, 169, 255, 0.92) 50%, transparent 50%);
+        background-position:
+          calc(100% - 24px) calc(50% - 2px),
+          calc(100% - 18px) calc(50% - 2px);
+        background-size: 7px 7px, 7px 7px;
+        background-repeat: no-repeat;
+      }}
+      select:focus,
+      textarea:focus {{
+        border-color: rgba(131, 169, 255, 0.42);
+        box-shadow: 0 0 0 4px rgba(131, 169, 255, 0.08);
       }}
       textarea {{
         min-height: 112px;
@@ -583,23 +614,50 @@ async def home():
       button,
       .button {{
         cursor: pointer;
-        border-radius: 14px;
+        border-radius: 16px;
         border: 1px solid var(--border);
-        padding: 11px 14px;
+        padding: 12px 16px;
         color: var(--text);
         background: rgba(255, 255, 255, 0.04);
         text-decoration: none;
+        transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
       }}
       button.primary {{
-        background: linear-gradient(135deg, rgba(128, 169, 255, 0.2), rgba(89, 241, 200, 0.14));
+        background: linear-gradient(135deg, rgba(128, 169, 255, 0.24), rgba(89, 241, 200, 0.16));
+        box-shadow: 0 12px 26px rgba(98, 151, 255, 0.14);
       }}
       button.warn {{
         background: linear-gradient(135deg, rgba(255, 209, 102, 0.15), rgba(255, 123, 147, 0.08));
+      }}
+      button:hover,
+      .button:hover {{
+        transform: translateY(-1px);
+        border-color: rgba(131, 169, 255, 0.34);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+      }}
+      button:active,
+      .button:active {{
+        transform: translateY(0);
       }}
       button:disabled {{
         cursor: not-allowed;
         opacity: 0.48;
         filter: saturate(0.7);
+      }}
+      .button-row button.primary.loading {{
+        position: relative;
+        color: rgba(244, 247, 255, 0.92);
+      }}
+      .button-row button.primary.loading::after {{
+        content: "";
+        width: 14px;
+        height: 14px;
+        margin-left: 10px;
+        border-radius: 999px;
+        border: 2px solid rgba(255, 255, 255, 0.28);
+        border-top-color: rgba(255, 255, 255, 0.94);
+        display: inline-block;
+        animation: spin 700ms linear infinite;
       }}
       .explainer {{
         margin-top: 16px;
@@ -636,24 +694,39 @@ async def home():
         gap: 12px;
       }}
       .email-card {{
-        background: rgba(255, 255, 255, 0.03);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.025));
+        padding: 22px;
       }}
       .email-head {{
         display: flex;
         justify-content: space-between;
-        gap: 12px;
+        gap: 18px;
         align-items: start;
-        margin-bottom: 10px;
+        margin-bottom: 14px;
       }}
       .email-head h3 {{
         margin: 0;
-        font-size: 1rem;
+        font-size: 1.14rem;
+        line-height: 1.15;
       }}
       .email-sub {{
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
-        margin-bottom: 10px;
+        margin-top: 12px;
+      }}
+      .email-meta {{
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 124px;
+        text-align: right;
+        padding: 8px 10px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(126, 146, 255, 0.14);
+        color: var(--muted);
+        line-height: 1.3;
       }}
       .badge {{
         display: inline-flex;
@@ -725,10 +798,14 @@ async def home():
         color: var(--muted);
         font-size: 0.92rem;
       }}
+      @keyframes spin {{
+        from {{ transform: rotate(0deg); }}
+        to {{ transform: rotate(360deg); }}
+      }}
       @media (max-width: 900px) {{
         .topbar,
         .metrics,
-        .hero, .grid, .two-up, .workspace, .state-grid {{
+        .hero, .grid, .two-up, .workspace, .state-grid, .controls-top {{
           grid-template-columns: 1fr;
         }}
         .topbar {{
@@ -740,6 +817,13 @@ async def home():
         }}
         .hero-copy, .status-card, .request-card {{
           padding: 22px;
+        }}
+        .email-head {{
+          flex-direction: column;
+        }}
+        .email-meta {{
+          min-width: 0;
+          text-align: left;
         }}
       }}
     </style>
@@ -812,25 +896,27 @@ POST /step</pre>
       <section class="workspace">
         <div class="demo-card">
           <div class="controls">
-            <div class="field">
-              <label for="task-select">Task</label>
-              <select id="task-select">
-                <option value="classification">classification</option>
-                <option value="ranking">ranking</option>
-                <option value="full_triage">full_triage</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="seed-input">Seed</label>
-              <select id="seed-input">
-                <option value="42">42</option>
-                <option value="7">7</option>
-                <option value="123">123</option>
-                <option value="2026">2026</option>
-              </select>
+            <div class="controls-top">
+              <div class="field">
+                <label for="task-select">Task</label>
+                <select id="task-select">
+                  <option value="classification">classification</option>
+                  <option value="ranking">ranking</option>
+                  <option value="full_triage">full_triage</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="seed-input">Seed</label>
+                <select id="seed-input">
+                  <option value="42">42</option>
+                  <option value="7">7</option>
+                  <option value="123">123</option>
+                  <option value="2026">2026</option>
+                </select>
+              </div>
             </div>
             <div class="button-row">
-              <button class="primary" id="reset-btn" type="button">Reset Task</button>
+              <button class="primary" id="reset-btn" type="button">Load Fresh Task</button>
               <button id="state-btn" type="button">Refresh State</button>
             </div>
             <div class="explainer">
@@ -840,8 +926,9 @@ POST /step</pre>
               <div class="status-pills">
                 <span class="status-pill"><strong>Session</strong><span id="session-id" class="mono">none</span></span>
                 <span class="status-pill"><strong>Transport</strong><span id="session-transport">cookie + x-session-id</span></span>
+                <span class="status-pill"><strong>Auto Load</strong><span id="auto-load-state">on task or seed change</span></span>
               </div>
-              <div class="helper" id="session-helper">Reset a task to start a browser-bound episode. Ranking submit stays disabled until all visible ids are present exactly once.</div>
+              <div class="helper" id="session-helper">Choose a task and seed, then a fresh episode loads automatically. Ranking submit stays disabled until all visible ids are present exactly once.</div>
             </div>
             <div class="field" id="email-target-field">
               <label for="email-select">Email Target</label>
@@ -921,7 +1008,7 @@ POST /step</pre>
             </div>
           </div>
           <div id="email-list" class="email-list">
-            <div class="empty">Reset a task to load observation emails.</div>
+            <div class="empty">A fresh task loads automatically when the page opens or when task and seed change.</div>
           </div>
         </div>
       </section>
@@ -1000,9 +1087,12 @@ POST /step</pre>
       const responseDraft = document.getElementById("response-draft");
       const rankingHelper = document.getElementById("ranking-helper");
       const stepButton = document.getElementById("step-btn");
+      const resetButton = document.getElementById("reset-btn");
+      const stateButton = document.getElementById("state-btn");
       const sessionIdEl = document.getElementById("session-id");
       const sessionHelper = document.getElementById("session-helper");
       let currentSessionId = null;
+      let resetSerial = 0;
 
       function buildHeaders() {{
         const headers = {{ "Content-Type": "application/json" }};
@@ -1027,7 +1117,7 @@ POST /step</pre>
       function updateSessionBanner() {{
         sessionIdEl.textContent = currentSessionId || "none";
         if (!currentSessionId) {{
-          sessionHelper.textContent = "Reset a task to start a browser-bound episode. Ranking submit stays disabled until all visible ids are present exactly once.";
+          sessionHelper.textContent = "Choose a task and seed, then a fresh episode loads automatically. Ranking submit stays disabled until all visible ids are present exactly once.";
           return;
         }}
         if (currentTaskType === "ranking") {{
@@ -1035,6 +1125,22 @@ POST /step</pre>
           return;
         }}
         sessionHelper.textContent = "Session is active. You can inspect state, submit actions, and watch reward and grade details update after each step.";
+      }}
+
+      function setBusy(button, busyLabel) {{
+        if (!button) {{
+          return;
+        }}
+        if (busyLabel) {{
+          button.dataset.originalLabel = button.textContent;
+          button.textContent = busyLabel;
+          button.classList.add("loading");
+          button.disabled = true;
+          return;
+        }}
+        button.textContent = button.dataset.originalLabel || button.textContent;
+        button.classList.remove("loading");
+        updateStepButtonState();
       }}
 
       function renderStatePayload(state) {{
@@ -1064,7 +1170,7 @@ POST /step</pre>
                   <span class="badge">${{email.thread_id || "single"}}</span>
                 </div>
               </div>
-              <span class="count mono">${{new Date(email.timestamp).toLocaleString()}}</span>
+              <span class="email-meta mono">${{new Date(email.timestamp).toLocaleString()}}</span>
             </div>
             <p class="email-body">${{email.body}}</p>
           </article>
@@ -1097,9 +1203,11 @@ POST /step</pre>
       }}
 
       async function refreshState() {{
+        stateButton.disabled = true;
         const response = await fetch("/state", {{ credentials: "same-origin", headers: currentSessionId ? {{ "x-session-id": currentSessionId }} : undefined }});
         const data = await response.json();
         renderStatePayload(data);
+        stateButton.disabled = false;
       }}
 
       function renderObservation(observation) {{
@@ -1114,7 +1222,9 @@ POST /step</pre>
       }}
 
       async function resetTask() {{
+        const serial = ++resetSerial;
         syncControls();
+        setBusy(resetButton, "Loading Task");
         const body = {{
           task_type: taskSelect.value,
           seed: Number(seedInput.value),
@@ -1126,11 +1236,16 @@ POST /step</pre>
           body: JSON.stringify(body),
         }});
         const data = await response.json();
+        if (serial !== resetSerial) {{
+          setBusy(resetButton, null);
+          return;
+        }}
         currentSessionId = data.info?.session_id || currentSessionId;
         updateSessionBanner();
         renderObservation(data.observation);
         setResult(data);
         await refreshState();
+        setBusy(resetButton, null);
       }}
 
       function prefillRanking() {{
@@ -1257,7 +1372,8 @@ POST /step</pre>
         await refreshState();
       }}
 
-      taskSelect.addEventListener("change", syncControls);
+      taskSelect.addEventListener("change", () => void resetTask());
+      seedInput.addEventListener("change", () => void resetTask());
       rankingOrder.addEventListener("input", updateRankingHelper);
       rankingOrder.addEventListener("input", updateStepButtonState);
       document.getElementById("reset-btn").addEventListener("click", () => void resetTask());
@@ -1271,6 +1387,7 @@ POST /step</pre>
       syncControls();
       refreshState();
       updateRankingHelper();
+      void resetTask();
     </script>
   </body>
 </html>"""
