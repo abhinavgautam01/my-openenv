@@ -695,6 +695,9 @@ async def home():
       .email-list {{
         display: grid;
         gap: 12px;
+        max-height: 860px;
+        overflow: auto;
+        padding-right: 6px;
       }}
       .email-card {{
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.025));
@@ -774,6 +777,8 @@ async def home():
       }}
       .json-box pre {{
         min-height: 160px;
+        max-height: 780px;
+        overflow: auto;
       }}
       .hidden {{
         display: none;
