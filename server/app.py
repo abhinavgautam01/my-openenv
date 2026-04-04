@@ -536,10 +536,49 @@ async def home():
         font-family: "IBM Plex Mono", monospace;
         line-height: 1.5;
       }}
+      #ranking-order {{
+        min-height: 196px;
+      }}
       .button-row {{
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
+      }}
+      .helper {{
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.5;
+      }}
+      .helper strong {{
+        color: var(--text);
+      }}
+      .session-banner {{
+        display: grid;
+        gap: 10px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        border: 1px solid rgba(126, 146, 255, 0.18);
+        background: rgba(255, 255, 255, 0.03);
+      }}
+      .status-pills {{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }}
+      .status-pill {{
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(126, 146, 255, 0.18);
+        background: rgba(255, 255, 255, 0.025);
+        color: var(--text);
+        font-size: 0.88rem;
+      }}
+      .status-pill strong {{
+        color: var(--muted);
+        font-weight: 600;
       }}
       button,
       .button {{
@@ -556,6 +595,11 @@ async def home():
       }}
       button.warn {{
         background: linear-gradient(135deg, rgba(255, 209, 102, 0.15), rgba(255, 123, 147, 0.08));
+      }}
+      button:disabled {{
+        cursor: not-allowed;
+        opacity: 0.48;
+        filter: saturate(0.7);
       }}
       .explainer {{
         margin-top: 16px;
@@ -792,7 +836,14 @@ POST /step</pre>
             <div class="explainer">
               Browser actions call your live environment only. No agent is invoked here. Use this to inspect task dynamics, edge cases, and session behavior manually.
             </div>
-            <div class="field">
+            <div class="session-banner">
+              <div class="status-pills">
+                <span class="status-pill"><strong>Session</strong><span id="session-id" class="mono">none</span></span>
+                <span class="status-pill"><strong>Transport</strong><span id="session-transport">cookie + x-session-id</span></span>
+              </div>
+              <div class="helper" id="session-helper">Reset a task to start a browser-bound episode. Ranking submit stays disabled until all visible ids are present exactly once.</div>
+            </div>
+            <div class="field" id="email-target-field">
               <label for="email-select">Email Target</label>
               <select id="email-select"></select>
             </div>
@@ -809,6 +860,7 @@ POST /step</pre>
             <div class="field hidden" id="ranking-field">
               <label for="ranking-order">Ranking Order</label>
               <textarea id="ranking-order" placeholder="One email id per line"></textarea>
+              <div class="helper" id="ranking-helper">Ranking requires every visible email ID exactly once. Use <strong>Prefill Ranking</strong>, then reorder the lines.</div>
             </div>
             <div class="field hidden" id="priority-field">
               <label for="priority-select">Priority</label>
@@ -937,6 +989,7 @@ POST /step</pre>
       const taskSelect = document.getElementById("task-select");
       const seedInput = document.getElementById("seed-input");
       const emailSelect = document.getElementById("email-select");
+      const emailTargetField = document.getElementById("email-target-field");
       const classificationField = document.getElementById("classification-field");
       const rankingField = document.getElementById("ranking-field");
       const priorityField = document.getElementById("priority-field");
@@ -945,17 +998,43 @@ POST /step</pre>
       const responseField = document.getElementById("response-field");
       const rankingOrder = document.getElementById("ranking-order");
       const responseDraft = document.getElementById("response-draft");
+      const rankingHelper = document.getElementById("ranking-helper");
+      const stepButton = document.getElementById("step-btn");
+      const sessionIdEl = document.getElementById("session-id");
+      const sessionHelper = document.getElementById("session-helper");
+      let currentSessionId = null;
+
+      function buildHeaders() {{
+        const headers = {{ "Content-Type": "application/json" }};
+        if (currentSessionId) {{
+          headers["x-session-id"] = currentSessionId;
+        }}
+        return headers;
+      }}
 
       function setResult(payload) {{
         const reward = Number(payload.reward ?? 0);
         const done = Boolean(payload.done);
-        const lastAction = payload.observation?.last_action_result ?? payload.info?.last_action_result ?? "none";
+        const lastAction = payload.observation?.last_action_result ?? payload.info?.last_action_result ?? payload.detail ?? "none";
         const rewardEl = document.getElementById("result-reward");
         rewardEl.textContent = reward.toFixed(2);
         rewardEl.className = "result-value " + (reward > 0.75 ? "good" : reward < 0 ? "bad" : "neutral");
         document.getElementById("result-done").textContent = "done: " + String(done);
         document.getElementById("result-action").textContent = "last_action_result: " + lastAction;
         document.getElementById("result-json").textContent = JSON.stringify(payload, null, 2);
+      }}
+
+      function updateSessionBanner() {{
+        sessionIdEl.textContent = currentSessionId || "none";
+        if (!currentSessionId) {{
+          sessionHelper.textContent = "Reset a task to start a browser-bound episode. Ranking submit stays disabled until all visible ids are present exactly once.";
+          return;
+        }}
+        if (currentTaskType === "ranking") {{
+          sessionHelper.textContent = "Ranking is a single-shot task. Keep one visible email id per line, with no duplicates or omissions, then submit once.";
+          return;
+        }}
+        sessionHelper.textContent = "Session is active. You can inspect state, submit actions, and watch reward and grade details update after each step.";
       }}
 
       function renderStatePayload(state) {{
@@ -1006,15 +1085,19 @@ POST /step</pre>
         currentTaskType = taskSelect.value;
         classificationField.classList.toggle("hidden", currentTaskType !== "classification");
         rankingField.classList.toggle("hidden", currentTaskType !== "ranking");
+        emailTargetField.classList.toggle("hidden", currentTaskType === "ranking");
         priorityField.classList.toggle("hidden", currentTaskType !== "full_triage");
         triageCategoryField.classList.toggle("hidden", currentTaskType !== "full_triage");
         dispositionField.classList.toggle("hidden", currentTaskType !== "full_triage");
         responseField.classList.toggle("hidden", currentTaskType !== "full_triage");
         document.getElementById("prefill-btn").classList.toggle("hidden", currentTaskType !== "ranking");
+        updateSessionBanner();
+        updateRankingHelper();
+        updateStepButtonState();
       }}
 
       async function refreshState() {{
-        const response = await fetch("/state", {{ credentials: "same-origin" }});
+        const response = await fetch("/state", {{ credentials: "same-origin", headers: currentSessionId ? {{ "x-session-id": currentSessionId }} : undefined }});
         const data = await response.json();
         renderStatePayload(data);
       }}
@@ -1026,6 +1109,8 @@ POST /step</pre>
         if (currentTaskType === "ranking") {{
           rankingOrder.value = (observation.emails || []).map((email) => email.id).join("\\n");
         }}
+        updateRankingHelper();
+        updateStepButtonState();
       }}
 
       async function resetTask() {{
@@ -1037,10 +1122,12 @@ POST /step</pre>
         const response = await fetch("/reset", {{
           method: "POST",
           credentials: "same-origin",
-          headers: {{ "Content-Type": "application/json" }},
+          headers: buildHeaders(),
           body: JSON.stringify(body),
         }});
         const data = await response.json();
+        currentSessionId = data.info?.session_id || currentSessionId;
+        updateSessionBanner();
         renderObservation(data.observation);
         setResult(data);
         await refreshState();
@@ -1051,6 +1138,52 @@ POST /step</pre>
           return;
         }}
         rankingOrder.value = currentObservation.emails.map((email) => email.id).join("\\n");
+        updateRankingHelper();
+      }}
+
+      function normalizeRankingInput() {{
+        return rankingOrder.value
+          .split(/[,\\n]+/)
+          .map((item) => item.trim())
+          .filter(Boolean);
+      }}
+
+      function updateRankingHelper() {{
+        if (currentTaskType !== "ranking") {{
+          rankingHelper.innerHTML = "Ranking helper is only active for the ranking task.";
+          return;
+        }}
+        const expected = currentObservation?.emails?.map((email) => email.id) || [];
+        const submitted = normalizeRankingInput();
+        const unique = [...new Set(submitted)];
+        if (!expected.length) {{
+          rankingHelper.innerHTML = 'Reset a ranking task to load all visible email IDs.';
+          return;
+        }}
+        const isExact = submitted.length === expected.length && unique.length === expected.length && expected.every((id) => submitted.includes(id));
+        rankingHelper.innerHTML = isExact
+          ? `Ranking ready: <strong>${{submitted.length}}</strong> ids captured.`
+          : `Ranking requires <strong>${{expected.length}}</strong> ids exactly once. Current input has <strong>${{submitted.length}}</strong> lines and <strong>${{unique.length}}</strong> unique ids.`;
+      }}
+
+      function canSubmitCurrentAction() {{
+        if (!currentSessionId || !currentObservation) {{
+          return false;
+        }}
+        if (currentTaskType !== "ranking") {{
+          return true;
+        }}
+        const expectedIds = currentObservation?.emails?.map((email) => email.id) || [];
+        const submitted = normalizeRankingInput();
+        const uniqueIds = [...new Set(submitted)];
+        return expectedIds.length > 0
+          && submitted.length === expectedIds.length
+          && uniqueIds.length === expectedIds.length
+          && expectedIds.every((id) => submitted.includes(id));
+      }}
+
+      function updateStepButtonState() {{
+        stepButton.disabled = !canSubmitCurrentAction();
       }}
 
       async function submitStep() {{
@@ -1061,10 +1194,23 @@ POST /step</pre>
         if (currentTaskType === "classification") {{
           payload.category = document.getElementById("classification-category").value;
         }} else if (currentTaskType === "ranking") {{
-          payload.ranking = rankingOrder.value
-            .split(/[,\\n]+/)
-            .map((item) => item.trim())
-            .filter(Boolean);
+          payload.ranking = normalizeRankingInput();
+          const expectedIds = currentObservation?.emails?.map((email) => email.id) || [];
+          const uniqueIds = [...new Set(payload.ranking)];
+          const isExact = payload.ranking.length === expectedIds.length
+            && uniqueIds.length === expectedIds.length
+            && expectedIds.every((id) => payload.ranking.includes(id));
+          if (!isExact) {{
+            setResult({{
+              reward: -0.05,
+              done: false,
+              detail: `Ranking must include all ${{expectedIds.length}} visible email IDs exactly once before submit.`,
+            }});
+            updateRankingHelper();
+            updateStepButtonState();
+            return;
+          }}
+          payload.email_id = payload.ranking[0];
         }} else {{
           payload.priority = document.getElementById("priority-select").value;
           payload.category = document.getElementById("triage-category").value;
@@ -1078,7 +1224,7 @@ POST /step</pre>
         const response = await fetch("/step", {{
           method: "POST",
           credentials: "same-origin",
-          headers: {{ "Content-Type": "application/json" }},
+          headers: buildHeaders(),
           body: JSON.stringify(payload),
         }});
 
@@ -1091,16 +1237,29 @@ POST /step</pre>
         }}
 
         if (!response.ok) {{
+          if (response.status === 400 && data.detail && String(data.detail).includes("No episode in progress")) {{
+            data = {{
+              reward: 0.0,
+              done: false,
+              detail: "No active browser session was found. Reset the task once, then submit again from the same page.",
+            }};
+          }}
           setResult(data);
+          updateSessionBanner();
+          updateStepButtonState();
           return;
         }}
 
         renderObservation(data.observation);
         setResult(data);
+        updateRankingHelper();
+        updateSessionBanner();
         await refreshState();
       }}
 
       taskSelect.addEventListener("change", syncControls);
+      rankingOrder.addEventListener("input", updateRankingHelper);
+      rankingOrder.addEventListener("input", updateStepButtonState);
       document.getElementById("reset-btn").addEventListener("click", () => void resetTask());
       document.getElementById("state-btn").addEventListener("click", () => void refreshState());
       document.getElementById("step-btn").addEventListener("click", () => void submitStep());
@@ -1111,6 +1270,7 @@ POST /step</pre>
 
       syncControls();
       refreshState();
+      updateRankingHelper();
     </script>
   </body>
 </html>"""
