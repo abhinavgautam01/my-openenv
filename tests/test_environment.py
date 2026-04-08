@@ -89,7 +89,7 @@ class TestGraders:
         )
         
         result = grade_episode(scenario, [action])
-        assert 0.99 < result.score < 1.0
+        assert result.score == pytest.approx(0.99)
     
     def test_classification_grader_wrong(self):
         """Test classification grader with wrong action."""
@@ -103,7 +103,7 @@ class TestGraders:
         )
         
         result = grade_episode(scenario, [action])
-        assert 0.0 < result.score < 0.01
+        assert result.score == pytest.approx(0.10)
     
     def test_ranking_grader_perfect(self):
         """Test ranking grader with perfect order."""

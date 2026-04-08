@@ -135,8 +135,8 @@ class TestGraderEdgeCases:
         grader = TaskGrader(scenario)
         result = grader.grade(actions)
         
-        # Should return near-zero score (strict open interval)
-        assert 0.0 < result.score < 0.01
+        # Should return minimum bounded score
+        assert result.score == pytest.approx(0.10)
         assert "Ranking incomplete" in result.details.get("error", "")
     
     def test_ranking_with_all_same_priority(self):
@@ -185,7 +185,7 @@ class TestGraderEdgeCases:
         grader = TaskGrader(scenario)
         result = grader.grade(actions)
         
-        assert 0.0 < result.score < 0.01
+        assert result.score == pytest.approx(0.10)
         assert "Expected 1 action" in result.details.get("error", "")
 
 

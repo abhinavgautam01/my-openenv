@@ -44,6 +44,8 @@ TEMPERATURE = 0.3
 MAX_TOKENS = 500
 SUCCESS_SCORE_THRESHOLD = 0.5
 MAX_RESPONSE_BUDGET = 8
+MIN_TASK_SCORE = 0.10
+MAX_TASK_SCORE = 0.99
 
 
 # Environment class that spawns Docker containers
@@ -253,6 +255,15 @@ def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> No
         f"[END] success={str(success).lower()} steps={steps} score={score:.3f} rewards={rewards_str}",
         flush=True,
     )
+
+
+def normalize_task_score(score: float) -> float:
+    """Clamp task score to validator-safe range [0.10, 0.99]."""
+    if score <= MIN_TASK_SCORE:
+        return MIN_TASK_SCORE
+    if score >= MAX_TASK_SCORE:
+        return MAX_TASK_SCORE
+    return score
 
 
 def format_email_for_prompt(email: Email) -> str:
@@ -541,8 +552,8 @@ async def run_task(
         if task_type == "ranking":
             # For ranking task, process all emails in one action
             if not result.observation.emails:
-                # No emails to rank - score is 0
-                score = 0.0
+                # No emails to rank
+                score = MIN_TASK_SCORE
                 success = False
             else:
                 # Get all email IDs and create prompt with all emails
@@ -576,7 +587,7 @@ async def run_task(
                 )
                 
                 # Get final score
-                score = result.info.get("final_score", 0.0)
+                score = normalize_task_score(float(result.info.get("final_score", MIN_TASK_SCORE)))
                 success = score >= SUCCESS_SCORE_THRESHOLD
             
         else:
@@ -634,16 +645,17 @@ async def run_task(
                     break
         
         # Get final score
-        score = result.info.get("final_score", 0.0)
+        score = normalize_task_score(float(result.info.get("final_score", MIN_TASK_SCORE)))
         success = score >= SUCCESS_SCORE_THRESHOLD
         
     except Exception as e:
         # Silent failure - log to stderr if needed
         import sys
         print(f"Task failed: {e}", file=sys.stderr, flush=True)
-        score = 0.0
+        score = MIN_TASK_SCORE
         success = False
-    
+
+    score = normalize_task_score(score)
     log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
     
     return score

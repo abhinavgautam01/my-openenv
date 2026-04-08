@@ -1,7 +1,8 @@
 """
 Graders for Email Triage tasks.
 
-Each grader scores agent performance on a scale of 0.0 to 1.0:
+Each grader scores agent performance on a strict-open scale:
+- final task score is always in [0.10, 0.99]
 - Classification: Exact category match
 - Ranking: Kendall Tau rank correlation
 - Full Triage: Multi-objective weighted score
@@ -21,7 +22,8 @@ from server.models import (
 )
 
 logger = logging.getLogger(__name__)
-_STRICT_SCORE_EPSILON = 1e-6
+_MIN_TASK_SCORE = 0.10
+_MAX_TASK_SCORE = 0.99
 
 
 def kendall_tau_distance(ranking1: List[str], ranking2: List[str]) -> float:
@@ -96,7 +98,7 @@ def kendall_tau_correlation(ranking1: List[str], ranking2: List[str]) -> float:
 @dataclass
 class GradeResult:
     """Result of grading an episode."""
-    score: float  # 0.0 to 1.0
+    score: float  # strict range [0.10, 0.99]
     task_type: TaskType
     details: Dict  # Breakdown of score components
     passed: bool  # True if score >= threshold
@@ -397,11 +399,11 @@ class TaskGrader:
 
     @staticmethod
     def _strict_open_score(score: float) -> float:
-        """Clamp scores to the strict open interval (0, 1)."""
-        if score <= _STRICT_SCORE_EPSILON:
-            return _STRICT_SCORE_EPSILON
-        if score >= 1.0 - _STRICT_SCORE_EPSILON:
-            return 1.0 - _STRICT_SCORE_EPSILON
+        """Clamp task scores to validator-safe range [0.10, 0.99]."""
+        if score <= _MIN_TASK_SCORE:
+            return _MIN_TASK_SCORE
+        if score >= _MAX_TASK_SCORE:
+            return _MAX_TASK_SCORE
         return score
 
     def _score_response_budget_efficiency(self, action_map: Dict[str, EmailTriageAction]) -> float:
