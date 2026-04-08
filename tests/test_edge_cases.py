@@ -135,8 +135,8 @@ class TestGraderEdgeCases:
         grader = TaskGrader(scenario)
         result = grader.grade(actions)
         
-        # Should return 0.0 score (penalty for incomplete ranking)
-        assert result.score == 0.0
+        # Should return near-zero score (strict open interval)
+        assert 0.0 < result.score < 0.01
         assert "Ranking incomplete" in result.details.get("error", "")
     
     def test_ranking_with_all_same_priority(self):
@@ -185,7 +185,7 @@ class TestGraderEdgeCases:
         grader = TaskGrader(scenario)
         result = grader.grade(actions)
         
-        assert result.score == 0.0
+        assert 0.0 < result.score < 0.01
         assert "Expected 1 action" in result.details.get("error", "")
 
 

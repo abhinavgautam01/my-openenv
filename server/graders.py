@@ -21,6 +21,7 @@ from server.models import (
 )
 
 logger = logging.getLogger(__name__)
+_STRICT_SCORE_EPSILON = 1e-6
 
 
 def kendall_tau_distance(ranking1: List[str], ranking2: List[str]) -> float:
@@ -142,11 +143,12 @@ class TaskGrader:
         """
         # Handle edge case: no actions
         if not actions:
+            score = self._strict_open_score(0.0)
             return GradeResult(
-                score=0.0,
+                score=score,
                 task_type=self.task_type,
                 details={"error": "No actions provided"},
-                passed=False,
+                passed=score >= self.success_threshold,
             )
         
         # Filter out invalid actions (unknown email_ids)
@@ -170,27 +172,29 @@ class TaskGrader:
         Score = 1.0 if correct category, 0.0 otherwise.
         """
         if len(actions) != 1:
+            score = self._strict_open_score(0.0)
             return GradeResult(
-                score=0.0,
+                score=score,
                 task_type=self.task_type,
                 details={"error": f"Expected 1 action, got {len(actions)}"},
-                passed=False,
+                passed=score >= self.success_threshold,
             )
         
         action = actions[0]
         gt = self._gt_map.get(action.email_id)
         
         if gt is None:
+            score = self._strict_open_score(0.0)
             return GradeResult(
-                score=0.0,
+                score=score,
                 task_type=self.task_type,
                 details={"error": f"Unknown email_id: {action.email_id}"},
-                passed=False,
+                passed=score >= self.success_threshold,
             )
         
         # Check category match
         correct = action.category == gt.correct_category
-        score = 1.0 if correct else 0.0
+        score = self._strict_open_score(1.0 if correct else 0.0)
         
         return GradeResult(
             score=score,
@@ -212,22 +216,24 @@ class TaskGrader:
         Score = (kendall_tau + 1) / 2, normalized to [0, 1].
         """
         if len(actions) != 1:
+            score = self._strict_open_score(0.0)
             return GradeResult(
-                score=0.0,
+                score=score,
                 task_type=self.task_type,
                 details={"error": f"Ranking task expects exactly 1 action with ranking field, got {len(actions)} actions"},
-                passed=False,
+                passed=score >= self.success_threshold,
             )
         
         action = actions[0]
         
         # Validate explicit ranking provided
         if not action.ranking:
+            score = self._strict_open_score(0.0)
             return GradeResult(
-                score=0.0,
+                score=score,
                 task_type=self.task_type,
                 details={"error": "No ranking provided in action"},
-                passed=False,
+                passed=score >= self.success_threshold,
             )
         
         # Check all email IDs are included exactly once
@@ -237,8 +243,9 @@ class TaskGrader:
         if expected_ids != provided_ids:
             missing = expected_ids - provided_ids
             extra = provided_ids - expected_ids
+            score = self._strict_open_score(0.0)
             return GradeResult(
-                score=0.0,
+                score=score,
                 task_type=self.task_type,
                 details={
                     "error": "Ranking incomplete",
@@ -247,7 +254,7 @@ class TaskGrader:
                     "expected_count": len(expected_ids),
                     "provided_count": len(provided_ids)
                 },
-                passed=False,
+                passed=score >= self.success_threshold,
             )
         
         # Ground truth order (sorted by priority)
@@ -260,16 +267,17 @@ class TaskGrader:
         try:
             tau = kendall_tau_correlation(agent_order, gt_order)
         except ValueError as e:
+            score = self._strict_open_score(0.0)
             return GradeResult(
-                score=0.0,
+                score=score,
                 task_type=self.task_type,
                 details={"error": f"Kendall tau calculation failed: {e}"},
-                passed=False,
+                passed=score >= self.success_threshold,
             )
         
         # Normalize to [0, 1]
         score = (tau + 1) / 2
-        score = max(0.0, min(1.0, score))
+        score = self._strict_open_score(score)
         
         return GradeResult(
             score=score,
@@ -360,8 +368,7 @@ class TaskGrader:
             0.10 * budget_efficiency +
             0.10 * thread_awareness
         ) * completion_penalty
-        
-        score = max(0.0, min(1.0, score))  # Clamp
+        score = self._strict_open_score(score)
         
         return GradeResult(
             score=score,
@@ -387,6 +394,15 @@ class TaskGrader:
             },
             passed=score >= self.success_threshold,
         )
+
+    @staticmethod
+    def _strict_open_score(score: float) -> float:
+        """Clamp scores to the strict open interval (0, 1)."""
+        if score <= _STRICT_SCORE_EPSILON:
+            return _STRICT_SCORE_EPSILON
+        if score >= 1.0 - _STRICT_SCORE_EPSILON:
+            return 1.0 - _STRICT_SCORE_EPSILON
+        return score
 
     def _score_response_budget_efficiency(self, action_map: Dict[str, EmailTriageAction]) -> float:
         """Score whether the limited response budget was spent on the right emails."""
